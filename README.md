@@ -1,37 +1,18 @@
-## Welcome to GitHub Pages
+# UI编辑器辅助
 
-You can use the [editor on GitHub](https://github.com/Lepozuk/UGUIEditorAssistant/edit/master/README.md) to maintain and preview the content for your website in Markdown files.
+### 目的
+    提升负责UI的美术小伙伴的工作效率
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
 
-### Markdown
+### 功能
+    针对非WorldSpace(世界空间)的Canvas(舞台控件)中的UI元素提供以下功能
+    * 可自定义显示网格
+    * 可控的网格吸附开关
+    * 显示当前UI元素的重绘估值(在UI布局时提供一个参考)
+    
 
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
-```
-
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-### Jekyll Themes
-
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/Lepozuk/UGUIEditorAssistant/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
-
-### Support or Contact
-
-Having trouble with Pages? Check out our [documentation](https://help.github.com/categories/github-pages-basics/) or [contact support](https://github.com/contact) and we’ll help you sort it out.
+### 计划
+    v0.0.1 制定功能计划 [√]
+    v0.0.2 可自定义显示网格 [√]
+    v0.0.3 可控的网格吸附开关 []
+    v0.0.4 显示当前UI元素的Overdraw(重绘)估值 [] -- 性能参考指标
