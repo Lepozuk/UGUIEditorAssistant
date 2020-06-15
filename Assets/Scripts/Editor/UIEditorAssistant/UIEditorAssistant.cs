@@ -1,9 +1,9 @@
 
-using System;
+
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UI
+namespace Editor.UIEditor
 {
     [InitializeOnLoad]
     public static class UIEditorAssistant
@@ -62,8 +62,8 @@ namespace Editor.UI
         {
             var obj = Selection.activeObject;
             if (obj != null &&
-                TryGetRectTransform(obj, out _selectedUIElement) &&
-                TryGetRootCanvas(_selectedUIElement.gameObject, out _selectedRootCanvas) && 
+                UIEditorUtils.TryGetRectTransform(obj, out _selectedUIElement) &&
+                UIEditorUtils.TryGetRootCanvas(_selectedUIElement.gameObject, out _selectedRootCanvas) && 
                 _selectedUIElement.gameObject != _selectedRootCanvas.gameObject)
             {
                 _selectedRootRect = GetRectFromUIElement(_selectedRootCanvas.transform as RectTransform);
@@ -86,49 +86,7 @@ namespace Editor.UI
             _selectedRootCanvas = null;
         }
         
-        /// <summary>
-        /// 获取UI的基本组件RectTransform
-        /// </summary>
-        private static bool TryGetRectTransform(object target, out RectTransform rect)
-        {
-            rect = null;
-            var go = target as GameObject;
-            if (go == null || !go.TryGetComponent(typeof(RectTransform), out var comp))
-            {
-                return false;
-            }
-            
-            rect = comp as RectTransform;
-            return true;
 
-        }
-        
-        /// <summary>
-        /// 获取当前UI对象的根舞台
-        /// </summary>
-        private static bool TryGetRootCanvas(GameObject obj, out Canvas output)
-        {
-            output = null;
-            
-            if(obj.TryGetComponent(typeof(Canvas), out var comp))
-            {
-                var canvas = comp as Canvas;
-                if (canvas.isRootCanvas)
-                {
-                    output = canvas;
-                    return true;
-                }
-            }
-            
-            return obj.transform.parent != null && TryGetRootCanvas(obj.transform.parent.gameObject, out output);
-        }
-
-        private static void CalcUIElementRect2D(Canvas canvas, RectTransform rectTrans, out Rect rect)
-        {
-            rect = Rect.zero;
-            
-        }
-        
         ///////////////////////////////////////////////////////////////////////////////////
         /// 吸附网格 ///////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////
@@ -160,6 +118,11 @@ namespace Editor.UI
         
         private static void SnapElementToGrid()
         {
+            if (!(UIEditorAssistantSetting.GridSnap && UIEditorAssistantSetting.GridVisible))
+            {
+                return;
+            }
+            
             //吸附网格的逻辑实现
             var rect = GetRectFromUIElement(_selectedUIElement);
             rect.x = Mathf.Round(rect.x / _selectedRootGridUnit) * _selectedRootGridUnit;
@@ -173,8 +136,6 @@ namespace Editor.UI
         ///////////////////////////////////////////////////////////////////////////////////
         /// 画辅助线 ///////////////////////////////////////////////////////////////////////
         ///////////////////////////////////////////////////////////////////////////////////
-        
-        
         /// <summary>
         /// 隐式置入Gizmo阶段
         /// </summary>
@@ -184,7 +145,8 @@ namespace Editor.UI
             DrawCanvasGrids();
             DrawElementGuideline();
         }
-
+        
+        ////////////////////////////////////////////////////////////////////////////////////
         /// <summary>
         /// 画当前根舞台的网格
         /// </summary>
@@ -204,23 +166,36 @@ namespace Editor.UI
             var GridSize = UIEditorAssistantSetting.GridSize;
         
             var rect = canvas.pixelRect;
-            Vector2 center = new Vector2(-rect.width * 0.5f,-rect.height * 0.5f);
-        
+
+            var halfWidth = rect.width * 0.5f;
+            var halfHeight = rect.height * 0.5f;
+            
             Gizmos.color = UIEditorAssistantSetting.GridColor;
             
             var lastMatrix = Gizmos.matrix;
             
             Gizmos.matrix = canvas.transform.localToWorldMatrix;
-        
-            for( int x = 0; x<=rect.width; x+=GridSize)
+            
+            /// 画纵线
+            Gizmos.DrawLine(new Vector3( 0, -halfHeight,0), new Vector3(0, halfHeight ,0));
+            for( var x = GridSize; x < halfWidth; x+=GridSize)
             {
-                Gizmos.DrawLine(new Vector3(center.x + x, center.y + 0,0), new Vector3(center.x + x, center.y + rect.height ,0));
+                Gizmos.DrawLine(new Vector3(  x, -halfHeight,0), new Vector3(  x, halfHeight ,0));
+                Gizmos.DrawLine(new Vector3( -x, -halfHeight,0), new Vector3( -x, halfHeight ,0));
             }
-
-            for ( int y = Mathf.RoundToInt(rect.height); y > 0 ; y -= GridSize)
+            Gizmos.DrawLine(new Vector3(  halfWidth, -halfHeight,0), new Vector3( halfWidth, halfHeight ,0));
+            Gizmos.DrawLine(new Vector3( -halfWidth, -halfHeight,0), new Vector3(-halfWidth, halfHeight ,0));
+            
+            
+            /// 画横线
+            Gizmos.DrawLine(new Vector3( -halfWidth, 0,0), new Vector3(halfWidth, 0 ,0));
+            for( var y = GridSize; y < halfHeight; y+=GridSize)
             {
-                Gizmos.DrawLine(new Vector3(center.x + 0, center.y + y,0), new Vector3(center.x + rect.width, center.y + y ,0));
+                Gizmos.DrawLine(new Vector3( -halfWidth,  y,0), new Vector3(halfWidth,  y,0));
+                Gizmos.DrawLine(new Vector3( -halfWidth, -y,0), new Vector3(halfWidth, -y,0));
             }
+            Gizmos.DrawLine(new Vector3( -halfWidth,  halfHeight,0), new Vector3( halfWidth,  halfHeight,0));
+            Gizmos.DrawLine(new Vector3( -halfWidth, -halfHeight,0), new Vector3( halfWidth, -halfHeight,0));
 
             Gizmos.matrix = lastMatrix;
         }
@@ -230,28 +205,43 @@ namespace Editor.UI
         /// </summary>
         private static void DrawElementGuideline()
         {
-            if (!(UIEditorAssistantSetting.GridVisible && !UIEditorAssistantSetting.GuideVisible && _selectedUIElement != null))
+            if (!(UIEditorAssistantSetting.GridVisible && UIEditorAssistantSetting.GuideVisible && _selectedUIElement != null))
             {
                 return;
             }
+
+            var color = UIEditorAssistantSetting.GuideColor;
+            var rect = GetRectFromUIElement(_selectedUIElement);
+            const float MAX = 100000f;
+            const float MIN = -100000f;
             
-            DrawSharpRect(GetRectFromUIElement(_selectedUIElement), UIEditorAssistantSetting.GuideColor);
+            var oldMatrix = Gizmos.matrix;
+            Gizmos.color = color;
+            
+            Gizmos.matrix = _selectedRootCanvas.transform.localToWorldMatrix;
+            Gizmos.DrawLine(new Vector3(rect.xMin, MIN, 0f), new Vector3(rect.xMin, MAX, 0f));
+            Gizmos.DrawLine(new Vector3(rect.xMax, MIN, 0f), new Vector3(rect.xMax, MAX, 0f));
+            
+            Gizmos.DrawLine(new Vector3(MIN, rect.yMin, 0f), new Vector3(MAX, rect.yMin, 0f));
+            Gizmos.DrawLine(new Vector3(MIN, rect.yMax, 0f), new Vector3(MAX, rect.yMax, 0f));
+
+            Gizmos.matrix = oldMatrix;
         }
 
         private static void SetRectToUIElement(Rect rect, RectTransform trans)
         {
-            var rectPos = rect.position;
-            rectPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(rectPos);
-            
-            var sizeDelta = trans.sizeDelta;
-            var pivot = trans.pivot;
-            var lossyScale = trans.lossyScale;
-
-            var tx = (rectPos.x - (sizeDelta.x * pivot.x) * lossyScale.x);
-            var ty = (rectPos.y + (sizeDelta.y * pivot.y) * lossyScale.y);
-            
-            trans.position = new Vector2(tx, ty);
-            
+            // var rectPos = rect.position;
+            // rectPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(rectPos);
+            //
+            // var sizeDelta = trans.sizeDelta;
+            // var pivot = trans.pivot;
+            // var lossyScale = trans.lossyScale;
+            //
+            // var tx = (rectPos.x - (sizeDelta.x * pivot.x) * lossyScale.x);
+            // var ty = (rectPos.y + (sizeDelta.y * pivot.y) * lossyScale.y);
+            //
+            // trans.position = new Vector2(tx, ty);
+            //
             // var position = trans.position;
             // var localPosition = trans.localPosition;
             // 
@@ -294,21 +284,9 @@ namespace Editor.UI
         }
 
 
-        private const float MAX = 100000f;
-        private const float MIN = -100000f;
-        private static void DrawSharpRect(Rect rect, Color color)
+        private static void DrawRectGuideline(Rect rect, Color color)
         {
-            var oldMatrix = Gizmos.matrix;
-            Gizmos.color = color;
             
-            Gizmos.matrix = _selectedRootCanvas.transform.localToWorldMatrix;
-            Gizmos.DrawLine(new Vector3(rect.xMin, MIN, 0f), new Vector3(rect.xMin, MAX, 0f));
-            Gizmos.DrawLine(new Vector3(rect.xMax, MIN, 0f), new Vector3(rect.xMax, MAX, 0f));
-            
-            Gizmos.DrawLine(new Vector3(MIN, rect.yMin, 0f), new Vector3(MAX, rect.yMin, 0f));
-            Gizmos.DrawLine(new Vector3(MIN, rect.yMax, 0f), new Vector3(MAX, rect.yMax, 0f));
-
-            Gizmos.matrix = oldMatrix;
         }
     }
 }

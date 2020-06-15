@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UI
+namespace Editor.UIEditor
 {
     internal static class UIEditorAssistantSetting
     {
@@ -151,14 +151,14 @@ namespace Editor.UI
         /// </summary>
         public static bool GuideVisible
         {
-            get => _gridVisible;
+            get => _guideVisible;
             set 
             {
-                if (_gridVisible == value)
+                if (_guideVisible == value)
                 {
                     return;
                 }
-                _gridVisible = value;
+                _guideVisible = value;
                 EditorPrefs.SetBool(GUIDE_VISIBLE, value);
                 NotifyUpdate(KEY.GUIDE_VISIBLE);
             }

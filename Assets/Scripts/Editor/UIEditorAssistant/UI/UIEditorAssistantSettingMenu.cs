@@ -1,8 +1,8 @@
-using System;
+
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UI
+namespace Editor.UIEditor.UI
 {
     [InitializeOnLoad]
     public static class UIEditorAssistantSettingMenu
@@ -57,8 +57,7 @@ namespace Editor.UI
         /// </summary>
         [MenuItem(GUIDE_VISIBLE, false, 1)]
         private static void ShowGuideline() => UIEditorAssistantSetting.GuideVisible = !UIEditorAssistantSetting.GuideVisible;
-        [MenuItem(GUIDE_VISIBLE, true)]
-        private static bool ShowGuideLine() => UIEditorAssistantSetting.GridVisible;
+
         
         /// <summary>
         /// 打开设置
