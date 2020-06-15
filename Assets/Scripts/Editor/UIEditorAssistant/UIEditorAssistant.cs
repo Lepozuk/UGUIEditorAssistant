@@ -1,5 +1,7 @@
 
 
+using System;
+using System.Diagnostics.Contracts;
 using UnityEditor;
 using UnityEngine;
 
@@ -42,14 +44,7 @@ namespace Editor.UIEditor
         /// 当前选择的根舞台
         /// </summary>
         private static Canvas _selectedRootCanvas;
-        /// <summary>
-        /// 当前选择的跟舞台的矩形区域
-        /// </summary>
-        private static Rect _selectedRootRect;
-        /// <summary>
-        /// 当前选择的根舞台的网格基于_selectRootRect的单位大小
-        /// </summary>
-        private static float _selectedRootGridUnit;
+        
         /// <summary>
         /// 当前选择的UI对象
         /// </summary>
@@ -61,15 +56,10 @@ namespace Editor.UIEditor
         private static void SelectionChanged()
         {
             var obj = Selection.activeObject;
-            if (obj != null &&
+            if (! ( obj != null &&
                 UIEditorUtils.TryGetRectTransform(obj, out _selectedUIElement) &&
                 UIEditorUtils.TryGetRootCanvas(_selectedUIElement.gameObject, out _selectedRootCanvas) && 
-                _selectedUIElement.gameObject != _selectedRootCanvas.gameObject)
-            {
-                _selectedRootRect = GetRectFromUIElement(_selectedRootCanvas.transform as RectTransform);
-                _selectedRootGridUnit = _selectedRootRect.width / (_selectedRootCanvas.pixelRect.width / UIEditorAssistantSetting.GridSize);
-            }
-            else
+                _selectedUIElement.gameObject != _selectedRootCanvas.gameObject ) )
             {
                 OnDeselect();
             }
@@ -80,8 +70,11 @@ namespace Editor.UIEditor
         /// </summary>
         private static void OnDeselect()
         {
-            _selectedRootGridUnit = 0f;
-            _selectedRootRect = Rect.zero;
+            if (_selectedUIElement)
+            {
+                SnapElementToGrid();
+            }
+            
             _selectedUIElement = null;
             _selectedRootCanvas = null;
         }
@@ -99,7 +92,7 @@ namespace Editor.UIEditor
             {
                 return;
             }
-
+            
             if (Event.current.button != 0)
             {
                 return;
@@ -122,14 +115,41 @@ namespace Editor.UIEditor
             {
                 return;
             }
+
+            var trans = _selectedUIElement;
             
-            //吸附网格的逻辑实现
-            var rect = GetRectFromUIElement(_selectedUIElement);
-            rect.x = Mathf.Round(rect.x / _selectedRootGridUnit) * _selectedRootGridUnit;
-            rect.y = Mathf.Round(rect.y / _selectedRootGridUnit) * _selectedRootGridUnit;
+            var position = trans.position;
+                
+            var localPosition = trans.localPosition;
+                
+            var pivot = trans.pivot;
+            var sizeDelta = trans.sizeDelta;
+            var lossyScale = trans.lossyScale;
+                
+            var xOffset = position.x - localPosition.x;
+            var yOffset = position.y - localPosition.y;
+                
+            var currX = ((sizeDelta.x * pivot.x) * lossyScale.x) + position.x;
+            var currY = ((sizeDelta.y * (1-pivot.y)) * lossyScale.y) + position.y;
+
+            Vector3 currPos = new Vector3(currX, currY, trans.position.z);
+            currPos = _selectedRootCanvas.transform.worldToLocalMatrix.MultiplyPoint(currPos);
             
+            var gridSize = UIEditorAssistantSetting.GridSize;
             
-            SetRectToUIElement(rect, _selectedUIElement);
+            var canvasHalfSize = _selectedRootCanvas.pixelRect.size * 0.5f;
+            
+            var targetX = Mathf.Clamp(Convert.ToInt32(Mathf.Round(currPos.x/gridSize)*gridSize),-canvasHalfSize.x, canvasHalfSize.x);
+            var targetY = Mathf.Clamp(Convert.ToInt32(Mathf.Round(currPos.y/gridSize)*gridSize),-canvasHalfSize.y, canvasHalfSize.y);
+
+            var targetPos = new Vector3(targetX, targetY, 0);
+            
+            targetPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(new Vector3(targetX, targetY, 0));
+            targetPos.x -= ((sizeDelta.x * pivot.x) * lossyScale.x);
+            targetPos.y -= ((sizeDelta.y * (1 - pivot.y)) * lossyScale.y);
+            
+            trans.position = targetPos;
+
         }
         
         
@@ -163,7 +183,7 @@ namespace Editor.UIEditor
                 return;
             }
 
-            var GridSize = UIEditorAssistantSetting.GridSize;
+            var gridSize = UIEditorAssistantSetting.GridSize;
         
             var rect = canvas.pixelRect;
 
@@ -173,12 +193,11 @@ namespace Editor.UIEditor
             Gizmos.color = UIEditorAssistantSetting.GridColor;
             
             var lastMatrix = Gizmos.matrix;
-            
             Gizmos.matrix = canvas.transform.localToWorldMatrix;
             
-            /// 画纵线
+            /// 画竖线
             Gizmos.DrawLine(new Vector3( 0, -halfHeight,0), new Vector3(0, halfHeight ,0));
-            for( var x = GridSize; x < halfWidth; x+=GridSize)
+            for( var x = gridSize; x < halfWidth; x+=gridSize)
             {
                 Gizmos.DrawLine(new Vector3(  x, -halfHeight,0), new Vector3(  x, halfHeight ,0));
                 Gizmos.DrawLine(new Vector3( -x, -halfHeight,0), new Vector3( -x, halfHeight ,0));
@@ -189,7 +208,7 @@ namespace Editor.UIEditor
             
             /// 画横线
             Gizmos.DrawLine(new Vector3( -halfWidth, 0,0), new Vector3(halfWidth, 0 ,0));
-            for( var y = GridSize; y < halfHeight; y+=GridSize)
+            for( var y = gridSize; y < halfHeight; y+=gridSize)
             {
                 Gizmos.DrawLine(new Vector3( -halfWidth,  y,0), new Vector3(halfWidth,  y,0));
                 Gizmos.DrawLine(new Vector3( -halfWidth, -y,0), new Vector3(halfWidth, -y,0));
@@ -211,7 +230,7 @@ namespace Editor.UIEditor
             }
 
             var color = UIEditorAssistantSetting.GuideColor;
-            var rect = GetRectFromUIElement(_selectedUIElement);
+            var rect = UIEditorUtils.GetRectFromUIElement(_selectedUIElement);
             const float MAX = 100000f;
             const float MIN = -100000f;
             
@@ -228,66 +247,8 @@ namespace Editor.UIEditor
             Gizmos.matrix = oldMatrix;
         }
 
-        private static void SetRectToUIElement(Rect rect, RectTransform trans)
-        {
-            // var rectPos = rect.position;
-            // rectPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(rectPos);
-            //
-            // var sizeDelta = trans.sizeDelta;
-            // var pivot = trans.pivot;
-            // var lossyScale = trans.lossyScale;
-            //
-            // var tx = (rectPos.x - (sizeDelta.x * pivot.x) * lossyScale.x);
-            // var ty = (rectPos.y + (sizeDelta.y * pivot.y) * lossyScale.y);
-            //
-            // trans.position = new Vector2(tx, ty);
-            //
-            // var position = trans.position;
-            // var localPosition = trans.localPosition;
-            // 
-            // var pivot = trans.pivot;
-            // var lossyScale = trans.lossyScale;
-            //
-            //
-            // var xOffset = position.x - localPosition.x;
-            // var yOffset = position.y - localPosition.y;
-            //
-            //
-            // var localX = rect.x + (sizeDelta.x * pivot.x) * lossyScale.x + xOffset;
-            // var localY = rect.y + (sizeDelta.y * pivot.y) * lossyScale.y + yOffset;
-            //
-            // trans.localPosition = new Vector3(localX, localY, trans.localPosition.z);
-        }
         
-        private static Rect GetRectFromUIElement(RectTransform trans)
-        {
-            var position = trans.position;
-            
-            var localPosition = trans.localPosition;
-            var sizeDelta = trans.sizeDelta;
-            var pivot = trans.pivot;
-            var lossyScale = trans.lossyScale;
 
-            var xOffset = position.x - localPosition.x;
-            var yOffset = position.y - localPosition.y;
-
-            var x1 = (localPosition.x - (sizeDelta.x * pivot.x) * lossyScale.x) + xOffset;
-            var x2 = (localPosition.x + (sizeDelta.x * (1f - pivot.x) * lossyScale.x)) + xOffset;
-            var y1 = (localPosition.y - (sizeDelta.y * pivot.y) * lossyScale.y) + yOffset;
-            var y2 = (localPosition.y + (sizeDelta.y * (1f - pivot.y) * lossyScale.y)) + yOffset;
-            
-            var worldToLocalMatrix = _selectedRootCanvas.transform.worldToLocalMatrix;
-            Vector2 min = worldToLocalMatrix.MultiplyPoint(new Vector3(x1, y1, 0));
-            Vector2 max = worldToLocalMatrix.MultiplyPoint(new Vector3(x2, y2, 0));
-            
-            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
-        }
-
-
-        private static void DrawRectGuideline(Rect rect, Color color)
-        {
-            
-        }
     }
 }
 
