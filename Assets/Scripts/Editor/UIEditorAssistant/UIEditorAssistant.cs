@@ -70,11 +70,6 @@ namespace Editor.UIEditor
         /// </summary>
         private static void OnDeselect()
         {
-            if (_selectedUIElement)
-            {
-                SnapElementToGrid();
-            }
-            
             _selectedUIElement = null;
             _selectedRootCanvas = null;
         }
