@@ -98,52 +98,35 @@ namespace Editor.UIEditor
             {
                 case EventType.MouseUp:
                 {
-                    SnapElementToGrid();
+                    DoSnapElementToGrid();
                     break;
                 }
             }
         }
-        
-        private static void SnapElementToGrid()
+
+        private static void DoSnapElementToGrid()
         {
             if (!(UIEditorAssistantSetting.GridSnap && UIEditorAssistantSetting.GridVisible))
             {
                 return;
             }
 
-            var trans = _selectedUIElement;
+            var canvasRect = UIEditorUtils.GetRectFromUIElement(_selectedUIElement);
+            var rect = canvasRect.Rect;
             
-            var position = trans.position;
-                
-            var localPosition = trans.localPosition;
-                
-            var pivot = trans.pivot;
-            var sizeDelta = trans.sizeDelta;
-            var lossyScale = trans.lossyScale;
-                
-            var xOffset = position.x - localPosition.x;
-            var yOffset = position.y - localPosition.y;
-                
-            var currX = ((sizeDelta.x * pivot.x) * lossyScale.x) + position.x;
-            var currY = ((sizeDelta.y * (1-pivot.y)) * lossyScale.y) + position.y;
-
-            Vector3 currPos = new Vector3(currX, currY, trans.position.z);
-            currPos = _selectedRootCanvas.transform.worldToLocalMatrix.MultiplyPoint(currPos);
+            var topLeft = new Vector3(rect.xMin, rect.yMax, 0);
             
             var gridSize = UIEditorAssistantSetting.GridSize;
-            
             var canvasHalfSize = _selectedRootCanvas.pixelRect.size * 0.5f;
+            var tx = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.x/gridSize)*gridSize),-canvasHalfSize.y, canvasHalfSize.y);
+            var ty = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.y/gridSize)*gridSize),-canvasHalfSize.x, canvasHalfSize.x);
+            var targetPos = new Vector3(tx, ty, 0);
             
-            var targetX = Mathf.Clamp(Convert.ToInt32(Mathf.Round(currPos.x/gridSize)*gridSize),-canvasHalfSize.x, canvasHalfSize.x);
-            var targetY = Mathf.Clamp(Convert.ToInt32(Mathf.Round(currPos.y/gridSize)*gridSize),-canvasHalfSize.y, canvasHalfSize.y);
+            targetPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(targetPos);
+            targetPos.x -= canvasRect.Offset.x;
+            targetPos.y -= canvasRect.Offset.w;
 
-            var targetPos = new Vector3(targetX, targetY, 0);
-            
-            targetPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(new Vector3(targetX, targetY, 0));
-            targetPos.x -= ((sizeDelta.x * pivot.x) * lossyScale.x);
-            targetPos.y -= ((sizeDelta.y * (1 - pivot.y)) * lossyScale.y);
-            
-            trans.position = targetPos;
+            _selectedUIElement.position = targetPos;
 
         }
         
@@ -225,7 +208,7 @@ namespace Editor.UIEditor
             }
 
             var color = UIEditorAssistantSetting.GuideColor;
-            var rect = UIEditorUtils.GetRectFromUIElement(_selectedUIElement);
+            var canvasRect = UIEditorUtils.GetRectFromUIElement(_selectedUIElement);
             const float MAX = 100000f;
             const float MIN = -100000f;
             
@@ -233,6 +216,9 @@ namespace Editor.UIEditor
             Gizmos.color = color;
             
             Gizmos.matrix = _selectedRootCanvas.transform.localToWorldMatrix;
+
+            var rect = canvasRect.Rect;
+            
             Gizmos.DrawLine(new Vector3(rect.xMin, MIN, 0f), new Vector3(rect.xMin, MAX, 0f));
             Gizmos.DrawLine(new Vector3(rect.xMax, MIN, 0f), new Vector3(rect.xMax, MAX, 0f));
             

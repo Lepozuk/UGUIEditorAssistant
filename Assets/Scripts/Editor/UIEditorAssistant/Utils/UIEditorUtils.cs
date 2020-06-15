@@ -40,13 +40,17 @@ namespace Editor.UIEditor
             
             return obj.transform.parent != null && TryGetRootCanvas(obj.transform.parent.gameObject, out output);
         }
-        
-        
-        internal static Rect GetRectFromUIElement(RectTransform trans)
+
+        private static CanvasRect _canvasRect = new CanvasRect();
+        internal static CanvasRect GetRectFromUIElement(RectTransform trans)
         {
             if (!TryGetRootCanvas(trans.gameObject, out var canvas))
             {
-                return Rect.zero;
+                _canvasRect.Rect = Rect.zero;
+                _canvasRect.Offset = Vector4.zero;
+                _canvasRect.AABB = Vector4.zero;
+                
+                return _canvasRect;
             }
             
             
@@ -57,23 +61,29 @@ namespace Editor.UIEditor
             var pivot = trans.pivot;
             var sizeDelta = trans.sizeDelta;
             var lossyScale = trans.lossyScale;
-                
-            var xOffset = position.x - localPosition.x;
-            var yOffset = position.y - localPosition.y;
-                
-            var x1 = (localPosition.x - (sizeDelta.x * pivot.x) * lossyScale.x) + xOffset;
-            var y1 = (localPosition.y - (sizeDelta.y * pivot.y) * lossyScale.y) + yOffset;
-            var x2 = (localPosition.x + (sizeDelta.x * (1f - pivot.x) * lossyScale.x)) + xOffset;
-            var y2 = (localPosition.y + (sizeDelta.y * (1f - pivot.y) * lossyScale.y)) + yOffset;
+            
+            var offsetX1 = -(sizeDelta.x * pivot.x) * lossyScale.x;
+            var offsetY1 = -(sizeDelta.y * pivot.y) * lossyScale.y;
+            var offsetX2 = sizeDelta.x * (1f - pivot.x) * lossyScale.x;
+            var offsetY2 = sizeDelta.y * (1f - pivot.y) * lossyScale.y;
+            
+            var x1 =  position.x + offsetX1;
+            var x2 =  position.x + offsetX2;
+            
+            var y1 =  position.y + offsetY1;
+            var y2 =  position.y + offsetY2;
                  
                  
                 
             var worldToLocalMatrix = canvas.transform.worldToLocalMatrix;
             Vector2 min = worldToLocalMatrix.MultiplyPoint(new Vector3(x1, y1, 0));
             Vector2 max = worldToLocalMatrix.MultiplyPoint(new Vector3(x2, y2, 0));
-                
-            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+            
+            _canvasRect.Rect = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+            _canvasRect.AABB = new Vector4(x1, y1, x2, y2);
+            _canvasRect.Offset = new Vector4(offsetX1, offsetY1, offsetX2, offsetY2);
 
+            return _canvasRect;
         }
     }
     
