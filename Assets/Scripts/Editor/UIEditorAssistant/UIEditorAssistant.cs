@@ -116,10 +116,12 @@ namespace Editor.UIEditor
             
             var topLeft = new Vector3(rect.xMin, rect.yMax, 0);
             
-            var gridSize = UIEditorAssistantSetting.GridSize;
+            var gridSizeX = UIEditorAssistantSetting.GridSizeX;
+            var gridSizeY = UIEditorAssistantSetting.GridSizeY;
+            
             var canvasHalfSize = _selectedRootCanvas.pixelRect.size * 0.5f;
-            var tx = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.x/gridSize)*gridSize),-canvasHalfSize.y, canvasHalfSize.y);
-            var ty = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.y/gridSize)*gridSize),-canvasHalfSize.x, canvasHalfSize.x);
+            var tx = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.x/gridSizeX) * gridSizeX),-canvasHalfSize.x, canvasHalfSize.x);
+            var ty = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.y/gridSizeY) * gridSizeY),-canvasHalfSize.y, canvasHalfSize.y);
             var targetPos = new Vector3(tx, ty, 0);
             
             targetPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(targetPos);
@@ -161,7 +163,8 @@ namespace Editor.UIEditor
                 return;
             }
 
-            var gridSize = UIEditorAssistantSetting.GridSize;
+            var gridSizeX = UIEditorAssistantSetting.GridSizeX;
+            var gridSizeY = UIEditorAssistantSetting.GridSizeY;
         
             var rect = canvas.pixelRect;
 
@@ -173,9 +176,10 @@ namespace Editor.UIEditor
             var lastMatrix = Gizmos.matrix;
             Gizmos.matrix = canvas.transform.localToWorldMatrix;
             
+            
             /// 画竖线
             Gizmos.DrawLine(new Vector3( 0, -halfHeight,0), new Vector3(0, halfHeight ,0));
-            for( var x = gridSize; x < halfWidth; x+=gridSize)
+            for( var x = gridSizeX; x < halfWidth; x+=gridSizeX)
             {
                 Gizmos.DrawLine(new Vector3(  x, -halfHeight,0), new Vector3(  x, halfHeight ,0));
                 Gizmos.DrawLine(new Vector3( -x, -halfHeight,0), new Vector3( -x, halfHeight ,0));
@@ -186,7 +190,7 @@ namespace Editor.UIEditor
             
             /// 画横线
             Gizmos.DrawLine(new Vector3( -halfWidth, 0,0), new Vector3(halfWidth, 0 ,0));
-            for( var y = gridSize; y < halfHeight; y+=gridSize)
+            for( var y = gridSizeY; y < halfHeight; y+=gridSizeY)
             {
                 Gizmos.DrawLine(new Vector3( -halfWidth,  y,0), new Vector3(halfWidth,  y,0));
                 Gizmos.DrawLine(new Vector3( -halfWidth, -y,0), new Vector3(halfWidth, -y,0));

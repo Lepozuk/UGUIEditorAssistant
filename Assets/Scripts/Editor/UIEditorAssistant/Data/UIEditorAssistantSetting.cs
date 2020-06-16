@@ -7,7 +7,8 @@ namespace Editor.UIEditor
     internal static class UIEditorAssistantSetting
     {
         private const string GRID_VISIBLE = "UIEditorAssistant.Setting.GridVisible";
-        private const string GRID_SIZE = "UIEditorAssistant.Setting.GridSize";
+        private const string GRID_SIZE_X = "UIEditorAssistant.Setting.GridSize.X";
+        private const string GRID_SIZE_Y = "UIEditorAssistant.Setting.GridSize.Y";
         private const string GRID_COLOR = "UIEditorAssistant.Setting.GridColor";
         private const string GRID_SNAP = "UIEditorAssistant.Setting.GridSnap";
         
@@ -16,7 +17,8 @@ namespace Editor.UIEditor
 
         
         private static bool _gridVisible;
-        private static int _gridSize;
+        private static int _gridSizeX;
+        private static int _gridSizeY;
         private static Color _gridColor;
         private static bool _gridSnap;
         
@@ -30,7 +32,8 @@ namespace Editor.UIEditor
         {
             GRID_VISIBLE,
             GRID_SNAP,
-            GRID_SIZE,
+            GRID_SIZE_X,
+            GRID_SIZE_Y,
             GRID_COLOR,
             GUIDE_VISIBLE,
             GUIDE_COLOR
@@ -40,7 +43,9 @@ namespace Editor.UIEditor
         private static void InitSetting()
         {
             GridVisible = EditorPrefs.GetBool(GRID_VISIBLE, true);
-            GridSize = EditorPrefs.GetInt(GRID_SIZE, 8);
+            GridSizeX = EditorPrefs.GetInt(GRID_SIZE_X, 8);
+            GridSizeY = EditorPrefs.GetInt(GRID_SIZE_Y, 8);
+            
             var defaultGridColor = Color.gray;
             defaultGridColor.a = 0.25f;
             GridColor = ReadColor(GRID_COLOR, defaultGridColor);
@@ -108,25 +113,44 @@ namespace Editor.UIEditor
             }
         }
         /// <summary>
-        /// 网格大小
+        /// 网格大小X
         /// </summary>
-        public static int GridSize
+        public static int GridSizeX
         {
-            get => _gridSize;
+            get => _gridSizeX;
             set
             {
-                value = Mathf.Max(4, Mathf.Min(1024, value));
+                value = Mathf.Max(2, Mathf.Min(40, value));
 
-                if (_gridSize == value)
+                if (_gridSizeX == value)
                 {
                     return;
                 }
-                _gridSize = value;
-                EditorPrefs.SetInt(GRID_SIZE, value);
-                NotifyUpdate(KEY.GRID_SIZE);
+                _gridSizeX = value;
+                EditorPrefs.SetInt(GRID_SIZE_X, value);
+                NotifyUpdate(KEY.GRID_SIZE_X);
             }
         }
         
+        /// <summary>
+        /// 网格大小X
+        /// </summary>
+        public static int GridSizeY
+        {
+            get => _gridSizeY;
+            set
+            {
+                value = Mathf.Max(2, Mathf.Min(40, value));
+
+                if (_gridSizeY == value)
+                {
+                    return;
+                }
+                _gridSizeY = value;
+                EditorPrefs.SetInt(GRID_SIZE_Y, value);
+                NotifyUpdate(KEY.GRID_SIZE_Y);
+            }
+        }
         
         /// <summary>
         /// 网格颜色

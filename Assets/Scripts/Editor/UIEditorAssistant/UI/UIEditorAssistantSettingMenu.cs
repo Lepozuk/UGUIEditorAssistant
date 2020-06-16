@@ -13,13 +13,13 @@ namespace Editor.UIEditor.UI
         
         private const string GRID_SNAP = "Window/UI编辑器辅助/吸附舞台网格";
         
-        
         private const string SHOW_SETTINGS = "Window/UI编辑器辅助/设置...";
         
         static UIEditorAssistantSettingMenu()
         {
             UIEditorAssistantSetting.OnSettingUpdate += key =>
             {
+                
                 switch (key)
                 {
                     case UIEditorAssistantSetting.KEY.GRID_VISIBLE:
