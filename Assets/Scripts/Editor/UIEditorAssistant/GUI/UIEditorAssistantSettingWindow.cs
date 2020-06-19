@@ -1,7 +1,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UIEditor.UI
+namespace Editor.UIEditorAssistant
 {
     public class UIEditorAssistantSettingWindow : EditorWindow
     {

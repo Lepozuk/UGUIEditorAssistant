@@ -1,11 +1,10 @@
 
 
 using System;
-using System.Diagnostics.Contracts;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UIEditor
+namespace Editor.UIEditorAssistant
 {
     [InitializeOnLoad]
     public static class UIEditorAssistant
@@ -57,8 +56,8 @@ namespace Editor.UIEditor
         {
             var obj = Selection.activeObject;
             if (! ( obj != null &&
-                UIEditorUtils.TryGetRectTransform(obj, out _selectedUIElement) &&
-                UIEditorUtils.TryGetRootCanvas(_selectedUIElement.gameObject, out _selectedRootCanvas) && 
+                UIUtility.TryGetRectTransform(obj as GameObject, out _selectedUIElement) &&
+                UIUtility.TryGetRootCanvas(_selectedUIElement.gameObject, out _selectedRootCanvas) && 
                 _selectedUIElement.gameObject != _selectedRootCanvas.gameObject ) )
             {
                 OnDeselect();
@@ -111,7 +110,7 @@ namespace Editor.UIEditor
                 return;
             }
 
-            var canvasRect = UIEditorUtils.GetRectFromUIElement(_selectedUIElement);
+            var canvasRect = UIUtility.GetCanvasRect(_selectedUIElement);
             var rect = canvasRect.Rect;
             
             var topLeft = new Vector3(rect.xMin, rect.yMax, 0);
@@ -125,8 +124,8 @@ namespace Editor.UIEditor
             var targetPos = new Vector3(tx, ty, 0);
             
             targetPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(targetPos);
-            targetPos.x -= canvasRect.Offset.x;
-            targetPos.y -= canvasRect.Offset.w;
+            targetPos.x -= canvasRect.PivotToSide.x;
+            targetPos.y -= canvasRect.PivotToSide.w;
 
             _selectedUIElement.position = targetPos;
 
@@ -212,7 +211,7 @@ namespace Editor.UIEditor
             }
 
             var color = UIEditorAssistantSetting.GuideColor;
-            var canvasRect = UIEditorUtils.GetRectFromUIElement(_selectedUIElement);
+            var canvasRect = UIUtility.GetCanvasRect(_selectedUIElement);
             const float MAX = 100000f;
             const float MIN = -100000f;
             

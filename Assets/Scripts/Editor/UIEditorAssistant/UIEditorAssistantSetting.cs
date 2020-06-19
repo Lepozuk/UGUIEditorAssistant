@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UIEditor
+namespace Editor.UIEditorAssistant
 {
     internal static class UIEditorAssistantSetting
     {

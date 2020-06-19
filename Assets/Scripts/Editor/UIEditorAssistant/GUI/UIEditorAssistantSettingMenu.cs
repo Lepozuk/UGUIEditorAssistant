@@ -2,7 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UIEditor.UI
+namespace Editor.UIEditorAssistant
 {
     [InitializeOnLoad]
     public static class UIEditorAssistantSettingMenu

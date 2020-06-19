@@ -1,22 +1,24 @@
 using UnityEngine;
 
-namespace Editor.UIEditor
+namespace Editor
 {
-    public static class UIEditorUtils
+    public static class UIUtility
     {
         /// <summary>
         /// 获取UI的基本组件RectTransform
         /// </summary>
-        internal static bool TryGetRectTransform(object target, out RectTransform rect)
+        /// <param name="target">GameObject</param>
+        /// <param name="output"></param>
+        /// <returns></returns>
+        public static bool TryGetRectTransform(GameObject gameObject, out RectTransform output)
         {
-            rect = null;
-            var go = target as GameObject;
-            if (go == null || !go.TryGetComponent(typeof(RectTransform), out var comp))
+            output = null;
+            if (gameObject == null || !gameObject.TryGetComponent(typeof(RectTransform), out var comp))
             {
                 return false;
             }
             
-            rect = comp as RectTransform;
+            output = comp as RectTransform;
             return true;
 
         }
@@ -24,11 +26,11 @@ namespace Editor.UIEditor
         /// <summary>
         /// 获取当前UI对象的根舞台
         /// </summary>
-        internal static bool TryGetRootCanvas(GameObject obj, out Canvas output)
+        public static bool TryGetRootCanvas(GameObject gameObject, out Canvas output)
         {
             output = null;
             
-            if(obj.TryGetComponent(typeof(Canvas), out var comp))
+            if(gameObject.TryGetComponent(typeof(Canvas), out var comp))
             {
                 var canvas = comp as Canvas;
                 if (canvas.isRootCanvas)
@@ -38,25 +40,22 @@ namespace Editor.UIEditor
                 }
             }
             
-            return obj.transform.parent != null && TryGetRootCanvas(obj.transform.parent.gameObject, out output);
+            return gameObject.transform.parent != null && TryGetRootCanvas(gameObject.transform.parent.gameObject, out output);
         }
 
-        private static CanvasRect _canvasRect = new CanvasRect();
-        internal static CanvasRect GetRectFromUIElement(RectTransform trans)
+        
+        public static CanvasRect GetCanvasRect(RectTransform trans)
         {
+
+            var output = new CanvasRect();
+
             if (!TryGetRootCanvas(trans.gameObject, out var canvas))
             {
-                _canvasRect.Rect = Rect.zero;
-                _canvasRect.Offset = Vector4.zero;
-                _canvasRect.AABB = Vector4.zero;
-                
-                return _canvasRect;
+                return output;
             }
-            
             
             var position = trans.position;
                 
-            var localPosition = trans.localPosition;
                 
             var pivot = trans.pivot;
             var sizeDelta = trans.sizeDelta;
@@ -79,12 +78,20 @@ namespace Editor.UIEditor
             Vector2 min = worldToLocalMatrix.MultiplyPoint(new Vector3(x1, y1, 0));
             Vector2 max = worldToLocalMatrix.MultiplyPoint(new Vector3(x2, y2, 0));
             
-            _canvasRect.Rect = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
-            _canvasRect.AABB = new Vector4(x1, y1, x2, y2);
-            _canvasRect.Offset = new Vector4(offsetX1, offsetY1, offsetX2, offsetY2);
-
-            return _canvasRect;
+            var center = worldToLocalMatrix.MultiplyPoint(position);
+            
+            output.Rect = Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+            output.PivotToSide = new Vector4(offsetX1, offsetY1, offsetX2, offsetY2);
+            output.Center = center;
+            return output;
+            
         }
     }
     
+    public struct CanvasRect
+    {
+        public Rect Rect;
+        public Vector4 PivotToSide;
+        public Vector3 Center;
+    }
 }
