@@ -1,5 +1,3 @@
-
-
 using System;
 using UnityEditor;
 using UnityEngine;
@@ -87,30 +85,103 @@ namespace Editor.UIEditorAssistant
                 return;
             }
             
-            if (Event.current.button != 0)
-            {
-                return;
-            }
-            
             EventType type = Event.current.type;
             switch (type)
             {
-                case EventType.MouseUp:
+                case EventType.KeyDown:
                 {
-                    DoSnapElementToGrid();
+                    switch (Event.current.keyCode)
+                    {
+                        case KeyCode.UpArrow:
+                        {
+                            MoveElementByGridStep(Vector3.up);
+                            break;
+                        }
+                        case KeyCode.DownArrow:
+                        {
+                            MoveElementByGridStep(Vector3.down);
+                            break;
+                        }
+                        case KeyCode.LeftArrow:
+                        {
+                            MoveElementByGridStep(Vector3.left);
+                            break;
+                        }
+                        case KeyCode.RightArrow:
+                        {
+                            MoveElementByGridStep(Vector3.right);
+                            break;
+                        }
+                        default: 
+                            break;
+                    }
                     break;
                 }
+                case EventType.MouseUp:
+                {
+                    if (Event.current.button == 0)
+                    {
+                        DoSnapElementToGrid();
+                    }
+                    break;
+                }
+                
+                default: 
+                    break;
             }
+        }
+
+        
+        private static void MoveElementByGridStep(Vector3 direction)
+        {
+            if (!GetCorrectElementPosition(out var canvasRect, out var position))
+            {
+                return;
+            }
+
+            var offset = new Vector3();
+            offset.x = UIEditorAssistantSetting.GridSizeX;
+            offset.y = UIEditorAssistantSetting.GridSizeY;
+            offset.Scale(direction);
+            position += offset;
+
+            ChangeElementPositionFromGrid(_selectedUIElement, canvasRect, position);
+            DoSnapElementToGrid();
         }
 
         private static void DoSnapElementToGrid()
         {
-            if (!(UIEditorAssistantSetting.GridSnap && UIEditorAssistantSetting.GridVisible))
+            if (!GetCorrectElementPosition(out var canvasRect, out var position))
             {
                 return;
             }
 
-            var canvasRect = UIUtility.GetCanvasRect(_selectedUIElement);
+            ChangeElementPositionFromGrid(_selectedUIElement, canvasRect, position);
+        }
+
+
+        private static void ChangeElementPositionFromGrid(RectTransform transform, CanvasRect canvasRect,
+            Vector3 targetPos)
+        {
+            targetPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(targetPos);
+            targetPos.x -= canvasRect.PivotToSide.x;
+            targetPos.y -= canvasRect.PivotToSide.w;
+
+            _selectedUIElement.position = targetPos;
+        }
+        
+        private static bool GetCorrectElementPosition(out CanvasRect canvasRect, out Vector3 position)
+        {
+            canvasRect = new CanvasRect();
+            position = Vector3.zero;
+            
+            if (!(UIEditorAssistantSetting.GridSnap && UIEditorAssistantSetting.GridVisible))
+            {
+                return false;
+            }
+            
+            canvasRect = UIUtility.GetCanvasRect(_selectedUIElement);
+            
             var rect = canvasRect.Rect;
             
             var topLeft = new Vector3(rect.xMin, rect.yMax, 0);
@@ -121,16 +192,11 @@ namespace Editor.UIEditorAssistant
             var canvasHalfSize = _selectedRootCanvas.pixelRect.size * 0.5f;
             var tx = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.x/gridSizeX) * gridSizeX),-canvasHalfSize.x, canvasHalfSize.x);
             var ty = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.y/gridSizeY) * gridSizeY),-canvasHalfSize.y, canvasHalfSize.y);
-            var targetPos = new Vector3(tx, ty, 0);
             
-            targetPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(targetPos);
-            targetPos.x -= canvasRect.PivotToSide.x;
-            targetPos.y -= canvasRect.PivotToSide.w;
+            position = new Vector3(tx, ty, 0);
 
-            _selectedUIElement.position = targetPos;
-
+            return true;
         }
-        
         
         ///////////////////////////////////////////////////////////////////////////////////
         /// 画辅助线 ///////////////////////////////////////////////////////////////////////

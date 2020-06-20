@@ -162,7 +162,7 @@ MonoBehaviour:
   m_BlockingObjects: 0
   m_BlockingMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 55
 --- !u!114 &478366796
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -264,7 +264,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 216, y: 199.42863}
+  m_AnchoredPosition: {x: -96, y: 223.42862}
   m_SizeDelta: {x: 160, y: 81.1427}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &695145522
@@ -750,12 +750,12 @@ PrefabInstance:
     - target: {fileID: 2278952256565593957, guid: fe05d62e98b9249e3964a197a933cb54,
         type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: -632.99994
+      value: -309.99997
       objectReference: {fileID: 0}
     - target: {fileID: 2278952256565593957, guid: fe05d62e98b9249e3964a197a933cb54,
         type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: 329.99997
+      value: 157.99998
       objectReference: {fileID: 0}
     - target: {fileID: 2278952256565593957, guid: fe05d62e98b9249e3964a197a933cb54,
         type: 3}

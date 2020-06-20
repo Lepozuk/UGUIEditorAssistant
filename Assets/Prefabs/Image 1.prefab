@@ -94,3 +94,9 @@ MonoBehaviour:
   - AliasName: 
     Type: 1
     Offset: {x: 35.3, y: -43}
+  - AliasName: AA
+    Type: 1
+    Offset: {x: 30, y: 10}
+  - AliasName: 
+    Type: 1
+    Offset: {x: 0, y: 0}
