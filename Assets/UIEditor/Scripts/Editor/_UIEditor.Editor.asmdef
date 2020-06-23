@@ -1,0 +1,19 @@
+{
+    "name": "_UIEditor.Editor",
+    "references": [
+        "GUID:985d1e9f6f3d44865a227fe79b3426d4",
+        "GUID:41a1637f6666dd64a95b2ce0aa98d0b9",
+        "GUID:5c786597f4122bd4599f5c93dd47847f"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
