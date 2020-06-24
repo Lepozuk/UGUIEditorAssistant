@@ -1,19 +1,10 @@
-using System;
 using UnityEditor;
 using UnityEngine;
-
-namespace Editor.UIEditorAssistant
+namespace Editor.UIEditor.Assistant
 {
     internal static class UIEditorAssistantSetting
     {
-        private const string GRID_VISIBLE = "UIEditorAssistant.Setting.GridVisible";
-        private const string GRID_SIZE_X = "UIEditorAssistant.Setting.GridSize.X";
-        private const string GRID_SIZE_Y = "UIEditorAssistant.Setting.GridSize.Y";
-        private const string GRID_COLOR = "UIEditorAssistant.Setting.GridColor";
-        private const string GRID_SNAP = "UIEditorAssistant.Setting.GridSnap";
         
-        private const string GUIDE_VISIBLE = "UIEditorAssistant.Setting.GuideVisible";
-        private const string GUIDE_COLOR = "UIEditorAssistant.Setting.GuideColor";
 
         
         private static bool _gridVisible;
@@ -25,35 +16,22 @@ namespace Editor.UIEditorAssistant
         private static bool _guideVisible;
         private static Color _guideColor;
 
-        internal static Action<KEY> OnSettingUpdate;
-        
-        
-        public enum KEY
-        {
-            GRID_VISIBLE,
-            GRID_SNAP,
-            GRID_SIZE_X,
-            GRID_SIZE_Y,
-            GRID_COLOR,
-            GUIDE_VISIBLE,
-            GUIDE_COLOR
-        }
         
         [InitializeOnLoadMethod]
         private static void InitSetting()
         {
-            GridVisible = EditorPrefs.GetBool(GRID_VISIBLE, true);
-            GridSizeX = EditorPrefs.GetInt(GRID_SIZE_X, 8);
-            GridSizeY = EditorPrefs.GetInt(GRID_SIZE_Y, 8);
+            GridVisible = EditorPrefs.GetBool(SettingConsts.Assistant.GRID_SIZE_Y, true);
+            GridSizeX = EditorPrefs.GetInt(SettingConsts.Assistant.GRID_SIZE_X, 8);
+            GridSizeY = EditorPrefs.GetInt(SettingConsts.Assistant.GRID_SIZE_Y, 8);
             
             var defaultGridColor = Color.gray;
             defaultGridColor.a = 0.25f;
-            GridColor = ReadColor(GRID_COLOR, defaultGridColor);
-            GridSnap = EditorPrefs.GetBool(GRID_SNAP, true);
+            GridColor = ReadColor(SettingConsts.Assistant.GRID_COLOR, defaultGridColor);
+            GridSnap = EditorPrefs.GetBool(SettingConsts.Assistant.GRID_SNAP, true);
 
-            GuideVisible = EditorPrefs.GetBool(GUIDE_VISIBLE, true);
+            GuideVisible = EditorPrefs.GetBool(SettingConsts.Assistant.GUIDE_VISIBLE, true);
             var defaultGuideLineColor = Color.cyan;
-            GuideColor = ReadColor(GUIDE_COLOR, defaultGuideLineColor);
+            GuideColor = ReadColor(SettingConsts.Assistant.GUIDE_COLOR, defaultGuideLineColor);
         }
 
         private static void WriteColor(string key, Color color)
@@ -72,11 +50,6 @@ namespace Editor.UIEditorAssistant
             color.a = EditorPrefs.GetFloat(key + "_a", color.a);
             return color;
         }
-
-        private static void NotifyUpdate(KEY key)
-        {
-            OnSettingUpdate?.Invoke(key);
-        }
         
         /// <summary>
         /// 显示网格
@@ -91,8 +64,7 @@ namespace Editor.UIEditorAssistant
                     return;
                 }
                 _gridVisible = value;
-                EditorPrefs.SetBool(GRID_VISIBLE, value);
-                NotifyUpdate(KEY.GRID_VISIBLE);
+                EditorPrefs.SetBool(SettingConsts.Assistant.GRID_VISIBLE, value);
             }
         }
         /// <summary>
@@ -108,8 +80,7 @@ namespace Editor.UIEditorAssistant
                     return;
                 }
                 _gridSnap = value;
-                EditorPrefs.SetBool(GRID_SNAP, value);
-                NotifyUpdate(KEY.GRID_SNAP);
+                EditorPrefs.SetBool(SettingConsts.Assistant.GRID_SNAP, value);
             }
         }
         /// <summary>
@@ -127,8 +98,7 @@ namespace Editor.UIEditorAssistant
                     return;
                 }
                 _gridSizeX = value;
-                EditorPrefs.SetInt(GRID_SIZE_X, value);
-                NotifyUpdate(KEY.GRID_SIZE_X);
+                EditorPrefs.SetInt(SettingConsts.Assistant.GRID_SIZE_X, value);
             }
         }
         
@@ -147,8 +117,7 @@ namespace Editor.UIEditorAssistant
                     return;
                 }
                 _gridSizeY = value;
-                EditorPrefs.SetInt(GRID_SIZE_Y, value);
-                NotifyUpdate(KEY.GRID_SIZE_Y);
+                EditorPrefs.SetInt(SettingConsts.Assistant.GRID_SIZE_Y, value);
             }
         }
         
@@ -165,8 +134,7 @@ namespace Editor.UIEditorAssistant
                     return;
                 }
                 _gridColor = value;
-                WriteColor(GRID_COLOR, value);
-                NotifyUpdate(KEY.GRID_COLOR);
+                WriteColor(SettingConsts.Assistant.GRID_COLOR, value);
             }
         }
 
@@ -183,8 +151,7 @@ namespace Editor.UIEditorAssistant
                     return;
                 }
                 _guideVisible = value;
-                EditorPrefs.SetBool(GUIDE_VISIBLE, value);
-                NotifyUpdate(KEY.GUIDE_VISIBLE);
+                EditorPrefs.SetBool(SettingConsts.Assistant.GUIDE_VISIBLE, value);
             }
         }
         /// <summary>
@@ -200,8 +167,7 @@ namespace Editor.UIEditorAssistant
                     return;
                 }
                 _guideColor = value;
-                WriteColor(GUIDE_COLOR, value);
-                NotifyUpdate(KEY.GUIDE_COLOR);
+                WriteColor(SettingConsts.Assistant.GUIDE_COLOR, value);
             }
         }
     }

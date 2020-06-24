@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UIEditorAssistant
+namespace Editor.UIEditor.Assistant
 {
     [InitializeOnLoad]
     public static class UIEditorAssistant
