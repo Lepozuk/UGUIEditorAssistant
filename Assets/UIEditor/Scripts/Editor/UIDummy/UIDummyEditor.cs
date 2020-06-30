@@ -2,6 +2,8 @@
 #if UNITY_EDITOR
 
 using Editor;
+using JetBrains.Annotations;
+using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
@@ -11,30 +13,47 @@ namespace UIExtension.Editor
     [CustomEditor(typeof(UIDummy))]
     public class UIDummyEditor : OdinEditor
     {
+        
         private static bool IsPrefab(GameObject go)
         {
             var correspondingObject = PrefabUtility.GetCorrespondingObjectFromSource(go);
             var instanceHandle = PrefabUtility.GetPrefabInstanceHandle(go);
             return correspondingObject != null && instanceHandle != null;
         }
+
+        [CanBeNull]
+        public UIDummy Dummy
+        {
+            get
+            { 
+                var mono = target as UIDummy;
+                if (mono == null || IsPrefab(mono.gameObject))
+                {
+                    return null;
+                }
+
+                return mono;
+            } 
+        }
+
+        private readonly GUIContent DummyLabel = new GUIContent("锚点列表");
         
         public override void OnInspectorGUI()
         {
-            var mono = target as UIDummy;
-            if (mono == null || IsPrefab(mono.gameObject))
-            {
-                return;
-            }
-            
-            InspectorUtilities.BeginDrawPropertyTree(Tree, true);
-            
-            var dummys = Tree.GetPropertyAtPath("Dummys");
-            if (dummys != null)
-            {
-                dummys.Draw(new GUIContent("锚点列表"));      
-            }
+             if (Dummy == null)
+             {
+                 return;
+             }
              
-            InspectorUtilities.EndDrawPropertyTree(Tree);
+             InspectorUtilities.BeginDrawPropertyTree(Tree, true);
+
+             var property = Tree.GetPropertyAtPath("Dummys");
+             if (property != null)
+             {
+                 property.Draw(DummyLabel);
+             }
+             
+             InspectorUtilities.EndDrawPropertyTree(Tree);
         }
 
         [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
