@@ -3,7 +3,7 @@ using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UIEditor
+namespace Editor.UIEditor.PrefabWindow
 {
     internal static class UIPrefabWindowUtil
     {
@@ -29,79 +29,41 @@ namespace Editor.UIEditor
         }
     }
     
-    public class UIPrefabWindow : OdinEditorWindow
+    internal class UIPrefabWindow : OdinEditorWindow
     {
-        [ShowInInspector, EnumToggleButtons, HideLabel]
-        internal UIPrefabType DisplayType = UIPrefabType.原子;
 
-        [ShowInInspector, HideReferenceObjectPicker, HideLabel, InlineProperty, ShowIf("DisplayType", UIPrefabType.设置)]
-        internal UIPrefabSettingView SettingView = new UIPrefabSettingView();
+        [ShowInInspector, EnumToggleButtons, HideLabel, OnValueChanged("OnDisplayTypeChanged")]
+        private UIPrefabWindowDisplayType DisplayType = UIPrefabWindowDisplayType.原子;
 
-        
-    }
-
-    internal enum UIPrefabType
-    {
-        原子,
-        模组,
-        设置
-    }
-
-    
-    internal class UIPrefabSettingView
-    {
-        
-        
-        private const string UI_PREFAB_ROOT = "Assets/Prefabs/UI"; 
-        
-        [Title("UI预制件路径设置", Bold = false)]
-        
-        [LabelText("原子存放目录")] 
-        [FolderPath(ParentFolder = UI_PREFAB_ROOT, RequireExistingPath = true)]
-        [ShowInInspector]
-        public string AtomPath{
-            get => EditorPrefs.GetString(SettingConsts.UIPrefabs.ATOM_PATH, UI_PREFAB_ROOT + "/Atoms");
-            set
-            {
-                if (ValidateAssetPath(ref value))
-                {
-                    EditorPrefs.SetString(SettingConsts.UIPrefabs.ATOM_PATH, value);
-                } 
-            }
-        }
-        
-        [LabelText("模组存放目录")] 
-        [FolderPath(ParentFolder = UI_PREFAB_ROOT, RequireExistingPath = true)]
-        [ShowInInspector]
-        public string ModulePath {
-            get => EditorPrefs.GetString(SettingConsts.UIPrefabs.MODULE_PATH, UI_PREFAB_ROOT + "/Modules");
-            set
-            {
-                if (ValidateAssetPath(ref value))
-                {
-                    EditorPrefs.SetString(SettingConsts.UIPrefabs.MODULE_PATH, value);
-                } 
-            }
-        }
-        
-
-        private bool ValidateAssetPath(ref string path)
+        private void OnDisplayTypeChanged()
         {
-            if (path.IndexOf("..") != 0)
+            Debug.Log("Current:" + DisplayType);
+            if (DisplayType != UIPrefabWindowDisplayType.设置)
             {
-                return true;
+                string listFoler;
+                switch (DisplayType)
+                {
+                    case UIPrefabWindowDisplayType.原子:
+                        listFoler = settingView.AtomPath;
+                        break;
+                    case UIPrefabWindowDisplayType.模组:
+                        listFoler = settingView.ModulePath;
+                        break;
+                    default:
+                        return;
+                }
+                itemList.ItemListFolder = listFoler;
             }
-            
-            UIPrefabWindowUtil.ShowNotification(new GUIContent("请选择项目内" + UI_PREFAB_ROOT + "的子目录"));
-            path = "";
-            return false;
-
         }
-    }
-    
-    internal class UIPrefabItem
-    {
+        
+        [ShowInInspector, HideReferenceObjectPicker, HideLabel, InlineProperty, ShowIf("DisplayType", UIPrefabWindowDisplayType.设置)]
+        private UIPrefabSettingView settingView = new UIPrefabSettingView();
+        
+        [ShowInInspector, HideReferenceObjectPicker, HideLabel, InlineProperty,HideIf("DisplayType", UIPrefabWindowDisplayType.设置)]
+        private UIPrefabItemList itemList = new UIPrefabItemList();
+        
+        
+
         
     }
-    
 }
