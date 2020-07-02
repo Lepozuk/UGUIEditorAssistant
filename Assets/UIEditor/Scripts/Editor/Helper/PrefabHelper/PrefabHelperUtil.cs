@@ -45,13 +45,7 @@ namespace Editor.UIEditor
             return tex;
         }
         
-        public static string ObjectToGUID(UnityEngine.Object obj)
-        {
-            string path = AssetDatabase.GetAssetPath(obj);
-            return (!string.IsNullOrEmpty(path)) ? AssetDatabase.AssetPathToGUID(path) : null;
-        }
-        
-        private static UnityEngine.Object GUIDToObject(string guid)
+        private static Object GUIDToObject(string guid)
         {
             if (string.IsNullOrEmpty(guid)) return null;
             int id = AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(AssetDatabase.GUIDToAssetPath(guid)).GetInstanceID();
@@ -108,13 +102,13 @@ namespace Editor.UIEditor
      
             GameObject cameraObj = new GameObject("render camera");
             Camera renderCamera = cameraObj.AddComponent<Camera>();
-            renderCamera.backgroundColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+            renderCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
             renderCamera.clearFlags = CameraClearFlags.Color;
             renderCamera.cameraType = CameraType.SceneView;
             renderCamera.cullingMask = 1 << 21;
             renderCamera.nearClipPlane = -100;
             renderCamera.farClipPlane = 100;
-     
+            
             bool isUINode = false;
             if (cloneTransform is RectTransform)
             {
@@ -123,7 +117,7 @@ namespace Editor.UIEditor
                 Canvas canvas = canvasObj.GetComponent<Canvas>();
                 cloneTransform.SetParent(canvasObj.transform);
                 cloneTransform.localPosition = Vector3.zero;
-                //canvas_obj.transform.position = new Vector3(-1000, -1000, -1000);
+                
                 canvasObj.layer = 21;//放在21层，摄像机也只渲染此层的，避免混入了奇怪的东西
                 canvas.renderMode = RenderMode.ScreenSpaceCamera;
                 canvas.worldCamera = renderCamera;
@@ -148,14 +142,13 @@ namespace Editor.UIEditor
             if (isUINode)
             {
                 cameraObj.transform.position = new Vector3(0, 0, -10);
-                //Vector3 center = new Vector3(cloneTransform.position.x, (Max.y + Min.y) / 2f, cloneTransform.position.z);
                 cameraObj.transform.LookAt(Vector3.zero);
      
                 renderCamera.orthographic = true;
                 float width = Max.x - Min.x;
                 float height = Max.y - Min.y;
-                float max_camera_size = width > height ? width : height;
-                renderCamera.orthographicSize = max_camera_size / 2;//预览图要尽量少点空白
+                float minCamSize = width > height ? width : height;
+                renderCamera.orthographicSize = minCamSize / 2; //预览图要尽量少点空白
             }
             else
             {

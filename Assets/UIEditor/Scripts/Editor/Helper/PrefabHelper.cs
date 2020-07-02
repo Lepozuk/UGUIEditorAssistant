@@ -1,10 +1,12 @@
 
+using System;
 using UnityEditor;
 using UnityEngine;
 using System.Collections.Generic;
 
 using System.IO;
 using System.Linq;
+using UnityEditor.Experimental.SceneManagement;
 using static UnityEditor.DragAndDrop;
 
 namespace Editor.UIEditor {
@@ -29,12 +31,12 @@ namespace Editor.UIEditor {
 		}
 
 		private const int CellPadding = 4;
-	    private const int CellSize = 90;
-
+		private const int CellDefaultSize = 90;
+	    private int CellSize = 90;
 		private int TabIndex = 0;
 		
 		private Vector2 GUIPos = Vector2.zero;
-		private bool MouseIsInside = false;
+		
 		private GUIContent Content;
 		private GUIStyle TextCenterStyle;
 
@@ -81,7 +83,7 @@ namespace Editor.UIEditor {
 		
 		
 	    private string[] assetPath = new[] {"Assets/ResourcesAssets/UI/Atoms", "Assets/ResourcesAssets/UI/Modules"};
-		
+	    private float[] cellScales = new[] {1f, 2f};
 
 		private readonly string PreviewTextureSavePath = "../Temp/UIPrefabHelper/Preview/";
 		
@@ -186,6 +188,8 @@ namespace Editor.UIEditor {
 			ClearItemCache();
 			
 			var folderPath = assetPath[tabIndex];
+			CellSize = Mathf.RoundToInt(CellDefaultSize * cellScales[tabIndex]);
+			
 			var guidArr = AssetDatabase.FindAssets("t:prefab", new string[] {folderPath});
 			foreach (var guid in guidArr)
 			{
@@ -215,7 +219,7 @@ namespace Editor.UIEditor {
 				return;
 			}
 			
-			var textureFileName = item.Prefab.name + ".png";
+			var textureFileName = item.Prefab.name + "_" + item.Guid +".png";
 			var relativeSavePath = Path.Combine(Path.Combine(PreviewTextureSavePath, TabIndex.ToString()), textureFileName);
 	        var previewTexPath = Path.Combine(Application.dataPath, relativeSavePath);
 	        
@@ -261,7 +265,7 @@ namespace Editor.UIEditor {
 					break;
 				}
 
-				x += spacingX;
+				//x += spacingX;
 
 				if (x + spacingX > width)
 				{
@@ -310,6 +314,9 @@ namespace Editor.UIEditor {
 			
 			TabIndex = newTab;
 		}
+
+		private float lastMouseDownTimeStamp = 0f;
+		private const float DOUBLE_CLICK_CHECK_VALUE = 0.05f;
 		
 		private void DrawItemList() 
 		{
@@ -327,56 +334,57 @@ namespace Editor.UIEditor {
 			
 
 			var draggedGameObjects = DraggedObjects;
+			
 			var isDragging = draggedGameObjects != null;
 			var indexUnderMouse = GetCellUnderMouse(spacingX, spacingY);
 			
-	  
-			 if (draggedGameObjects != null)
-			 {
-		 		foreach (var gameObject in draggedGameObjects)
-		 		{
-		 			var result = FindItem(gameObject);
-		 			
-		 			if (result != null)
-		 			{
-		 				_selections.Add(result);
-		 			}
-		 		}
-			 }
+			var eligibleToDrag = (currentEvent.mousePosition.y < Screen.height - 20);
 			
-			 var eligibleToDrag = (currentEvent.mousePosition.y < Screen.height - 20);
-			
-			 switch (type)
-			 {
-				 case EventType.MouseDrag:
-				 {
-					 MouseIsInside = true;
-					 if (indexUnderMouse != -1 && eligibleToDrag)
-					 {
-						 if (DraggedObjectIsOurs)
-						 {
-							 StartDrag("PrefabHelper");
-						 }
-						 currentEvent.Use();
-					 }
-
-					 break;
-				 }
-				 case EventType.DragUpdated:
-				 {
-					 MouseIsInside = true;
-					 UpdateVisual();
-					 currentEvent.Use();
-					 break;
-				 }
-			 }
-
-			 if (!MouseIsInside)
+			switch (type)
 			{
-				_selections.Clear();
-				draggedGameObjects = null;
+				case EventType.MouseDown:
+				{
+					var ts = Time.time;
+					if (ts - lastMouseDownTimeStamp < DOUBLE_CLICK_CHECK_VALUE)
+					{
+						var index = _currentDisplayItems[indexUnderMouse];
+						if (index != -1 && index < PrefabItemsInCurrentTab.Count)
+						{
+							var item = PrefabItemsInCurrentTab[index];
+							if (item.Prefab != null)
+							{
+								Debug.Log("Now Open: " + AssetDatabase.GetAssetPath(item.Prefab));
+								AssetDatabase.OpenAsset(item.Prefab);
+							} 
+							currentEvent.Use();
+						}
+					}
+					lastMouseDownTimeStamp = ts;
+					break;
+				}
+				case EventType.MouseDrag:
+				{
+					if (indexUnderMouse != -1 && eligibleToDrag)
+					{
+						if (DraggedObjectIsOurs)
+						{
+							StartDrag("PrefabHelper");
+						}
+						currentEvent.Use();
+					}
+					
+					break;
+				}
+				case EventType.DragUpdated:
+				{
+					UpdateVisual();
+					currentEvent.Use();
+					break;
+				}
 			}
-
+			
+			_selections.Clear();
+			
 			_currentDisplayItems.Clear();
 			
 			for (int i = 0; i < PrefabItemsInCurrentTab.Count; i++)
@@ -455,7 +463,7 @@ namespace Editor.UIEditor {
 					{
 						GeneratePreview(item, false);
 					}
-	                
+	                GUI.DrawTexture(inner, PrefabHelperUtil.BackdropTexture);
 					GUI.DrawTexture(inner, item.Tex);
 					
 					GUI.backgroundColor = new Color(1f, 1f, 1f, 0.5f);

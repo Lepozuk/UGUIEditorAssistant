@@ -15,15 +15,16 @@ namespace Editor.UIEditor
         static void OnSceneGUI(SceneView sceneView)
         {
             //当松开鼠标时
-            if (Event.current.type == EventType.DragPerform)
-            {
+            if (Event.current.type == EventType.DragPerform && DragAndDrop.objectReferences.Length > 0) {
                 DragAndDrop.AcceptDrag();
                 foreach (var item in DragAndDrop.objectReferences)
                 {
                     HandleDragAsset(sceneView, item);
                 }
+                Event.current.Use();
             }
         }
+        
         static void HandleDragAsset(SceneView sceneView, Object handleObj)
         {
             Event e = Event.current;
@@ -31,7 +32,7 @@ namespace Editor.UIEditor
             Vector3 mouse_abs_pos = e.mousePosition;
             mouse_abs_pos.y = cam.pixelHeight - mouse_abs_pos.y;
             mouse_abs_pos = sceneView.camera.ScreenToWorldPoint(mouse_abs_pos);
-            
+
             GameObject new_obj = GameObject.Instantiate(handleObj) as GameObject;
             if (new_obj != null)
             {
@@ -44,7 +45,6 @@ namespace Editor.UIEditor
                 if (container_trans == null)
                 {
                     sceneView.ShowNotification(new GUIContent("请确保当前场景内存在Canvas对象"));
-                    
                     GameObject.DestroyImmediate(new_obj);
                     return;
                 }
