@@ -265,8 +265,7 @@ namespace Editor.UIEditor {
 					break;
 				}
 
-				//x += spacingX;
-
+				x += spacingX;
 				if (x + spacingX > width)
 				{
 					if (pos.x > x)
@@ -276,11 +275,12 @@ namespace Editor.UIEditor {
 					y += spacingY;
 					x = CellPadding;
 
-					if (y + spacingY > height)
+					if (y > height)
 					{
 						return -1;
 					}
 				}
+				
 			}
 			
 			return index;
@@ -337,6 +337,8 @@ namespace Editor.UIEditor {
 			
 			var isDragging = draggedGameObjects != null;
 			var indexUnderMouse = GetCellUnderMouse(spacingX, spacingY);
+			
+			//Debug.Log("index under mouse: " + indexUnderMouse);
 			
 			var eligibleToDrag = (currentEvent.mousePosition.y < Screen.height - 20);
 			
@@ -436,22 +438,24 @@ namespace Editor.UIEditor {
 						continue;
 					}
 
-					var rect = new Rect(x, y, CellSize, CellSize);
-					var inner = rect;
-					inner.xMin += 2f;
-					inner.xMax -= 2f;
-					inner.yMin += 2f;
-					inner.yMax -= 2f;
-					rect.yMax -= 1f;
-
-					if (winRect.Overlaps(rect))
+					var itemBoxRect = new Rect(x, y, CellSize, CellSize);
+					var iconRect = itemBoxRect;
+					iconRect.xMin += 2f;
+					iconRect.xMax -= 2f;
+					iconRect.yMin += 2f;
+					iconRect.yMax -= 2f;
+					itemBoxRect.yMax -= 1f;
+					
+					var itemBoxRectCheck = new Rect(itemBoxRect);
+					itemBoxRectCheck.y -=  GUIPos.y;
+					if (winRect.Overlaps(itemBoxRectCheck))
 					{
 						Content.tooltip = !isDragging ? item.Prefab.name : "";
 
 						GUI.color = Color.white;
 						GUI.backgroundColor = normal;
 
-						if (GUI.Button(rect, Content, "Button"))
+						if (GUI.Button(itemBoxRect, Content, "Button"))
 						{
 							if (item != null && currentEvent.button == 1)
 							{
@@ -465,13 +469,14 @@ namespace Editor.UIEditor {
 							GeneratePreview(item, false);
 						}
 
-						GUI.DrawTexture(inner, PrefabHelperUtil.BackdropTexture);
-						GUI.DrawTexture(inner, item.Tex);
+						GUI.DrawTexture(iconRect, PrefabHelperUtil.BackdropTexture);
+						GUI.DrawTexture(iconRect, item.Tex);
 					}
 
-					var labelRect = new Rect(rect.x, rect.y + rect.height, rect.width, labelAreaHeight);
-					
-					if(winRect.Overlaps(labelRect)) 
+					var labelRect = new Rect(itemBoxRect.x, itemBoxRect.y + itemBoxRect.height, itemBoxRect.width, labelAreaHeight);
+					var labelRectCheck = new Rect(labelRect);
+					labelRectCheck.y -=  GUIPos.y;
+					if(winRect.Overlaps(labelRectCheck)) 
 					{
 						GUI.backgroundColor = new Color(1f, 1f, 1f, 0.5f);
 						GUI.contentColor = new Color(1f, 1f, 1f, 0.7f);
