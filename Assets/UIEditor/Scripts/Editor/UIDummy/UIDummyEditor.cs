@@ -1,16 +1,14 @@
 
 #if UNITY_EDITOR
 
-using Editor;
 using JetBrains.Annotations;
-using Sirenix.OdinInspector;
 using Sirenix.OdinInspector.Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace UIExtension.Editor
+namespace Editor.UIEditor
 {
-    [CustomEditor(typeof(UIDummy))]
+    [CustomEditor(typeof(UIExtension.UIDummy))]
     public class UIDummyEditor : OdinEditor
     {
         
@@ -22,11 +20,11 @@ namespace UIExtension.Editor
         }
 
         [CanBeNull]
-        public UIDummy Dummy
+        public UIExtension.UIDummy Dummy
         {
             get
             { 
-                var mono = target as UIDummy;
+                var mono = target as UIExtension.UIDummy;
                 if (mono == null || IsPrefab(mono.gameObject))
                 {
                     return null;
@@ -57,7 +55,7 @@ namespace UIExtension.Editor
         }
 
         [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
-        private static void DrawDummys(UIDummy component, GizmoType gizmoType)
+        private static void DrawDummys(UIExtension.UIDummy component, GizmoType gizmoType)
         {
             var gameObject = component?.gameObject;
             if (gameObject == null) return;
