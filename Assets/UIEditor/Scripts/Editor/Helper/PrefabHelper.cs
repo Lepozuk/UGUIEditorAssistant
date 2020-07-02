@@ -255,7 +255,7 @@ namespace Editor.UIEditor {
 			var width = Screen.width - CellPadding + GUIPos.x;
 			var height = Screen.height - CellPadding + GUIPos.y;
 			var index = 0;
-
+			
 			
 			for (; ; ++index)
 			{
@@ -331,7 +331,7 @@ namespace Editor.UIEditor {
 			var spacingX = CellSize + CellPadding;
 			var spacingY = spacingX + labelAreaHeight;
 			
-			
+			var winRect = new Rect(0,0, Screen.width, Screen.height);
 
 			var draggedGameObjects = DraggedObjects;
 			
@@ -437,40 +437,48 @@ namespace Editor.UIEditor {
 					}
 
 					var rect = new Rect(x, y, CellSize, CellSize);
-					
 					var inner = rect;
 					inner.xMin += 2f;
 					inner.xMax -= 2f;
 					inner.yMin += 2f;
 					inner.yMax -= 2f;
 					rect.yMax -= 1f;
- 
-					Content.tooltip = !isDragging?item.Prefab.name:"";
-					
-					GUI.color = Color.white;
-					GUI.backgroundColor = normal;
-					
-					if (GUI.Button(rect, Content, "Button"))
+
+					if (winRect.Overlaps(rect))
 					{
-						if (item != null && currentEvent.button == 1)
+						Content.tooltip = !isDragging ? item.Prefab.name : "";
+
+						GUI.color = Color.white;
+						GUI.backgroundColor = normal;
+
+						if (GUI.Button(rect, Content, "Button"))
 						{
-	                        ContextMenu.AddItem("刷新", false, RefreshItemTex, index);
-	                        ContextMenu.Show();
-	                    }
+							if (item != null && currentEvent.button == 1)
+							{
+								ContextMenu.AddItem("刷新", false, RefreshItemTex, index);
+								ContextMenu.Show();
+							}
+						}
+
+						if (item.Tex == null)
+						{
+							GeneratePreview(item, false);
+						}
+
+						GUI.DrawTexture(inner, PrefabHelperUtil.BackdropTexture);
+						GUI.DrawTexture(inner, item.Tex);
 					}
 
-	                if (item.Tex == null)
-					{
-						GeneratePreview(item, false);
-					}
-	                GUI.DrawTexture(inner, PrefabHelperUtil.BackdropTexture);
-					GUI.DrawTexture(inner, item.Tex);
+					var labelRect = new Rect(rect.x, rect.y + rect.height, rect.width, labelAreaHeight);
 					
-					GUI.backgroundColor = new Color(1f, 1f, 1f, 0.5f);
-					GUI.contentColor = new Color(1f, 1f, 1f, 0.7f);
-					GUI.Label(new Rect(rect.x, rect.y + rect.height, rect.width, labelAreaHeight), item.Prefab.name, "ProgressBarBack");
-					GUI.contentColor = Color.white;
-					GUI.backgroundColor = Color.white;
+					if(winRect.Overlaps(labelRect)) 
+					{
+						GUI.backgroundColor = new Color(1f, 1f, 1f, 0.5f);
+						GUI.contentColor = new Color(1f, 1f, 1f, 0.7f);
+						GUI.Label(labelRect, item.Prefab.name, "ProgressBarBack");
+						GUI.contentColor = Color.white;
+						GUI.backgroundColor = Color.white;
+					}
 					
 					x += spacingX;
 
