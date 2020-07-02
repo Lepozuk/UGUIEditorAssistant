@@ -3,12 +3,13 @@
 
 using JetBrains.Annotations;
 using Sirenix.OdinInspector.Editor;
+
 using UnityEditor;
 using UnityEngine;
 
 namespace Editor.UIEditor
 {
-    [CustomEditor(typeof(UIExtension.UIDummy))]
+    [CustomEditor(typeof(UIDummy))]
     public class UIDummyEditor : OdinEditor
     {
         
@@ -20,11 +21,11 @@ namespace Editor.UIEditor
         }
 
         [CanBeNull]
-        public UIExtension.UIDummy Dummy
+        public UIDummy Dummy
         {
             get
             { 
-                var mono = target as UIExtension.UIDummy;
+                var mono = target as UIDummy;
                 if (mono == null || IsPrefab(mono.gameObject))
                 {
                     return null;
@@ -55,7 +56,7 @@ namespace Editor.UIEditor
         }
 
         [DrawGizmo(GizmoType.Selected | GizmoType.Active)]
-        private static void DrawDummys(UIExtension.UIDummy component, GizmoType gizmoType)
+        private static void DrawDummys(UIDummy component, GizmoType gizmoType)
         {
             var gameObject = component?.gameObject;
             if (gameObject == null) return;
@@ -67,7 +68,7 @@ namespace Editor.UIEditor
             }
 
             var canvasRect = UIUtility.GetCanvasRect(rect);
-            var rectOfCanvas = canvasRect.Rect;
+            
             var center = canvasRect.Center;
             var mat4x4 = canvas.transform.localToWorldMatrix;
             
