@@ -1,44 +1,30 @@
 
+using System;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Editor.UIEditor
 {
     public static class PrefabHelperUtil
     {
         
+        private static Texture2D mBackdropTex, mBorderTex;
+        public static Texture2D BackdropTexture => mBackdropTex ?? (mBackdropTex = CreateCheckerTex(new Color(0.33f, 0.33f, 0.33f, 1f), 1,1 ));
+        public static Texture2D BorderTexture => mBorderTex ?? (mBorderTex = CreateCheckerTex(new Color(0f, 0f, 0f, 1f), 1,1 ));
         
-        private static Texture2D mBackdropTex;
-        public static Texture2D BackdropTexture
+        
+        private static Texture2D CreateCheckerTex(Color col, int w, int h)
         {
-            get
+            var tex = new Texture2D(w, h)
             {
-                if (mBackdropTex != null)
-                {
-                    return mBackdropTex;
-                }
-                
-                var c0 = new Color(0.1f, 0.1f, 0.1f, 0.5f);
-                var c1 = new Color(0.2f, 0.2f, 0.2f, 0.5f);
-                mBackdropTex = CreateCheckerTex(c0, c1);
-                return mBackdropTex;
-            }
-        }
-        private static Texture2D CreateCheckerTex(Color c0, Color c1)
-        {
-            var tex = new Texture2D(16, 16)
-            {
-                name = "[Generated] Checker Texture", 
                 hideFlags = HideFlags.DontSave
             };
 
-            var c0Arr = new Color[64] { c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0, c0 };
-            var c1Arr = new Color[64] { c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1, c1 };
-            tex.SetPixels(0,0,8,8, c1Arr);
-            tex.SetPixels(8,0,8,8, c0Arr);
-            tex.SetPixels(0,8,8,8, c0Arr);
-            tex.SetPixels(8,8,8,8, c1Arr);
+            for (var x = 0; x < tex.width ; x++)
+                for (var y = 0; y < tex.height ; y++)
+                    tex.SetPixel(x, y, col);
             
             tex.Apply();
             tex.filterMode = FilterMode.Point;
@@ -75,91 +61,66 @@ namespace Editor.UIEditor
         public static Texture2D LoadTextureInLocal(string file_path)
         {
             //创建文件读取流
-            FileStream fileStream = new FileStream(file_path, FileMode.Open, FileAccess.Read);
+            var fileStream = new FileStream(file_path, FileMode.Open, FileAccess.Read);
             fileStream.Seek(0, SeekOrigin.Begin);
+            
             //创建文件长度缓冲区
-            byte[] bytes = new byte[fileStream.Length];
+            var bytes = new byte[fileStream.Length];
+            
             //读取文件
             fileStream.Read(bytes, 0, (int)fileStream.Length);
             //释放文件读取流
             fileStream.Close();
             fileStream.Dispose();
-            fileStream = null;
-
-            //创建Texture
-            int width = 300;
-            int height = 372;
-            Texture2D texture = new Texture2D(width, height);
+            
+            
+            var texture = new Texture2D(1, 1);
             texture.LoadImage(bytes);
+            
             return texture;
         }
-        
-        public static Texture GetAssetPreview(GameObject obj)
+
+        public static Texture GetUIPrefabPreviewTexture(GameObject prefab)
         {
-            GameObject canvasObj = null;
-            GameObject clone = GameObject.Instantiate(obj);
-            Transform cloneTransform = clone.transform;
-     
-            GameObject cameraObj = new GameObject("render camera");
-            Camera renderCamera = cameraObj.AddComponent<Camera>();
-            renderCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
-            renderCamera.clearFlags = CameraClearFlags.Color;
-            renderCamera.cameraType = CameraType.SceneView;
-            renderCamera.cullingMask = 1 << 21;
-            renderCamera.nearClipPlane = -100;
-            renderCamera.farClipPlane = 100;
+            var renderCamera = InitCaptureCamera(prefab, out var canvasObj, out var cameraObj, out var bounds);
+      
+            var trans = prefab.GetComponent<RectTransform>();
+            var width = Convert.ToInt32(trans.rect.width);
+            var height = Convert.ToInt32(trans.rect.height);
             
-            bool isUINode = false;
-            if (cloneTransform is RectTransform)
-            {
-                //如果是UGUI节点的话就要把它们放在Canvas下了
-                canvasObj = new GameObject("render canvas", typeof(Canvas));
-                Canvas canvas = canvasObj.GetComponent<Canvas>();
-                cloneTransform.SetParent(canvasObj.transform);
-                cloneTransform.localPosition = Vector3.zero;
-                
-                canvasObj.layer = 21;//放在21层，摄像机也只渲染此层的，避免混入了奇怪的东西
-                canvas.renderMode = RenderMode.ScreenSpaceCamera;
-                canvas.worldCamera = renderCamera;
-                
-                isUINode = true;
-            }
-            else
-                cloneTransform.position = new Vector3(-1000, -1000, -1000);
+            var texture = new RenderTexture(width, height, 0, RenderTextureFormat.Default);
+            
+            var Min = bounds.min;
+            var Max = bounds.max;
      
-            Transform[] all = clone.GetComponentsInChildren<Transform>();
-            foreach (Transform trans in all)
-            {
-                trans.gameObject.layer = 21;
-            }
+            var bw = Max.x - Min.x;
+            var bh = Max.y - Min.y;
+            
+            var minCamSize = bw < bh ? bw : bh;
+            renderCamera.orthographicSize = minCamSize / 2; //预览图要尽量少点空白
+            
+            renderCamera.targetTexture = texture;
+            var tex = RTImage(renderCamera);
      
-            Bounds bounds = GetBounds(clone);
-            Vector3 Min = bounds.min;
-            Vector3 Max = bounds.max;
+            Object.DestroyImmediate(canvasObj);
+            Object.DestroyImmediate(cameraObj);
      
+            return tex;
+        }
+        
+        public static Texture GetUIPrefabListTexture(GameObject prefab)
+        {
+            var renderCamera = InitCaptureCamera(prefab, out var canvasObj, out var cameraObj, out var bounds);
+      
+            var Min = bounds.min;
+            var Max = bounds.max;
      
-     
-            if (isUINode)
-            {
-                cameraObj.transform.position = new Vector3(0, 0, -10);
-                cameraObj.transform.LookAt(Vector3.zero);
-     
-                renderCamera.orthographic = true;
-                float width = Max.x - Min.x;
-                float height = Max.y - Min.y;
-                float minCamSize = width > height ? width : height;
-                renderCamera.orthographicSize = minCamSize / 2; //预览图要尽量少点空白
-            }
-            else
-            {
-                cameraObj.transform.position = new Vector3((Max.x + Min.x) / 2f, (Max.y + Min.y) / 2f, Max.z + (Max.z - Min.z));
-                Vector3 center = new Vector3(cloneTransform.position.x, (Max.y + Min.y) / 2f, cloneTransform.position.z);
-                cameraObj.transform.LookAt(center);
-     
-                int angle = (int)(Mathf.Atan2((Max.y - Min.y) / 2, (Max.z - Min.z)) * 180 / 3.1415f * 2);
-                renderCamera.fieldOfView = angle;
-            }
-            RenderTexture texture = new RenderTexture(128, 128, 0, RenderTextureFormat.Default);
+            var width = Max.x - Min.x;
+            var height = Max.y - Min.y;
+            var minCamSize = width > height ? width : height;
+            renderCamera.orthographicSize = minCamSize / 2; //预览图要尽量少点空白
+            
+            var texture = new RenderTexture(128, 128, 0, RenderTextureFormat.Default);
             renderCamera.targetTexture = texture;
      
             var tex = RTImage(renderCamera);
@@ -167,8 +128,48 @@ namespace Editor.UIEditor
             Object.DestroyImmediate(canvasObj);
             Object.DestroyImmediate(cameraObj);
      
-     
             return tex;
+        }
+
+        static Camera InitCaptureCamera(GameObject prefab, out GameObject canvasObj, out GameObject cameraObj, out Bounds bounds)
+        {
+            var clone = GameObject.Instantiate(prefab);
+            var cloneTransform = clone.transform;
+     
+            cameraObj = new GameObject("render camera");
+            var renderCamera = cameraObj.AddComponent<Camera>();
+            
+            renderCamera.backgroundColor = new Color(0f, 0f, 0f, 0f);
+            renderCamera.clearFlags = CameraClearFlags.Color;
+            renderCamera.cameraType = CameraType.SceneView;
+            renderCamera.cullingMask = 1 << 21;
+            renderCamera.nearClipPlane = -100;
+            renderCamera.farClipPlane = 100;
+            
+            //如果是UGUI节点的话就要把它们放在Canvas下了
+            canvasObj = new GameObject("render canvas", typeof(Canvas));
+            Canvas canvas = canvasObj.GetComponent<Canvas>();
+            cloneTransform.SetParent(canvasObj.transform);
+            cloneTransform.localPosition = Vector3.zero;
+            
+            canvasObj.layer = 21;//放在21层，摄像机也只渲染此层的，避免混入了奇怪的东西
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
+            canvas.worldCamera = renderCamera;
+                
+            Transform[] all = clone.GetComponentsInChildren<Transform>();
+            foreach (Transform trans in all)
+            {
+                trans.gameObject.layer = 21;
+            }
+            
+            bounds = GetBounds(clone);
+            
+            cameraObj.transform.position = new Vector3(0, 0, -10);
+            cameraObj.transform.LookAt(Vector3.zero);
+ 
+            renderCamera.orthographic = true;
+            
+            return renderCamera;
         }
      
         static Texture2D RTImage(Camera camera)
@@ -266,13 +267,20 @@ namespace Editor.UIEditor
             png.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
             byte[] bytes = png.EncodeToPNG();
             string directory = Path.GetDirectoryName(save_file_name);
+
             if (!Directory.Exists(directory))
+            {
                 Directory.CreateDirectory(directory);
+            }
+            
             FileStream file = File.Open(save_file_name, FileMode.Create);
             BinaryWriter writer = new BinaryWriter(file);
             writer.Write(bytes);
             file.Close();
+            file.Dispose();
+            
             Texture2D.DestroyImmediate(png);
+            
             png = null;
             RenderTexture.active = prev;
             return true;

@@ -82,6 +82,11 @@ namespace Editor.UIEditor
         
         static public Transform GetContainerUnderMouse(Vector3 mouse_abs_pos, GameObject ignore_obj = null)
         {
+            var act = Selection.activeObject as GameObject;
+            if (act != null && act.TryGetComponent<RectTransform>(out var rectTrans))
+            {
+                return rectTrans;
+            }
             
             List<RectTransform> list = new List<RectTransform>();
             Canvas[] containers = Transform.FindObjectsOfType<Canvas>();
