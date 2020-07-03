@@ -15,17 +15,16 @@ namespace Editor.UIEditor
         static void OnSceneGUI(SceneView sceneView)
         {
             //当松开鼠标时
-            if (Event.current.type == EventType.DragPerform && DragAndDrop.objectReferences.Length > 0) {
+            if (Event.current.type == EventType.DragPerform && DragAndDrop.objectReferences.Length == 1) {
                 DragAndDrop.AcceptDrag();
-                foreach (var item in DragAndDrop.objectReferences)
+                if (HandleDragAsset(sceneView, DragAndDrop.objectReferences[0]))
                 {
-                    HandleDragAsset(sceneView, item);
-                }
-                Event.current.Use();
+                    Event.current.Use();
+                } 
             }
         }
         
-        static void HandleDragAsset(SceneView sceneView, Object handleObj)
+        static bool HandleDragAsset(SceneView sceneView, Object handleObj)
         {
             Event e = Event.current;
             Camera cam = sceneView.camera;
@@ -33,32 +32,38 @@ namespace Editor.UIEditor
             mouse_abs_pos.y = cam.pixelHeight - mouse_abs_pos.y;
             mouse_abs_pos = sceneView.camera.ScreenToWorldPoint(mouse_abs_pos);
 
-            GameObject new_obj = GameObject.Instantiate(handleObj) as GameObject;
-            if (new_obj != null)
+            
+            if (PrefabUtility.GetPrefabAssetType(handleObj) == PrefabAssetType.NotAPrefab)
             {
-                Undo.RegisterCreatedObjectUndo(new_obj, "create obj on drag prefab");
-                new_obj.transform.position = mouse_abs_pos;
-                GameObject ignore_obj = new_obj;
-
-                Transform container_trans = GetContainerUnderMouse(mouse_abs_pos, ignore_obj);
+                return false;
+            }
+            
+            var prefabObj = handleObj as GameObject;
+            if (prefabObj != null || !prefabObj.TryGetComponent<RectTransform>(out var rectTrans))
+            {
+                Transform parentTrans = GetContainerUnderMouse(mouse_abs_pos);
                 
-                if (container_trans == null)
+                if (parentTrans == null)
                 {
                     sceneView.ShowNotification(new GUIContent("请确保当前场景内存在Canvas对象"));
-                    GameObject.DestroyImmediate(new_obj);
-                    return;
+                    return true;
                 }
 
-                new_obj.transform.SetParent(container_trans);
-                mouse_abs_pos.z = container_trans.position.z;
-                
-                new_obj.transform.position = mouse_abs_pos;
-                new_obj.transform.localScale = Vector3.one;
-                Selection.activeGameObject = new_obj;
+                var newObj = PrefabUtility.InstantiatePrefab(prefabObj, parentTrans) as GameObject;
+                newObj.transform.position = mouse_abs_pos;
                 
                 //生成唯一的节点名字
-                new_obj.name = GenerateUniqueName(container_trans.gameObject, handleObj.name);
+                newObj.name = GenerateUniqueName(parentTrans.gameObject, handleObj.name);
+                
+                mouse_abs_pos.z = parentTrans.position.z;
+                newObj.transform.position = mouse_abs_pos;
+                
+                newObj.transform.localScale = Vector3.one;
+                Selection.activeGameObject = newObj;
+                return true;
             }
+
+            return false;
         }
         
         //生成parent下的唯一控件名
