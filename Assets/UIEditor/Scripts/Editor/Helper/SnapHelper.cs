@@ -140,8 +140,8 @@ namespace Editor.UIEditor.Assistant
             }
 
             var offset = new Vector3();
-            offset.x = UIEditorAssistantSetting.GridSizeX;
-            offset.y = UIEditorAssistantSetting.GridSizeY;
+            offset.x = HelperSettings.GridSize.x;
+            offset.y = HelperSettings.GridSize.y;
             offset.Scale(direction);
             position += offset;
 
@@ -175,7 +175,7 @@ namespace Editor.UIEditor.Assistant
             canvasRect = new CanvasRect();
             position = Vector3.zero;
             
-            if (!(UIEditorAssistantSetting.GridSnap && UIEditorAssistantSetting.GridVisible))
+            if (!(HelperSettings.GridSnap && HelperSettings.GridVisible))
             {
                 return false;
             }
@@ -186,8 +186,8 @@ namespace Editor.UIEditor.Assistant
             
             var topLeft = new Vector3(rect.xMin, rect.yMax, 0);
             
-            var gridSizeX = UIEditorAssistantSetting.GridSizeX;
-            var gridSizeY = UIEditorAssistantSetting.GridSizeY;
+            var gridSizeX = HelperSettings.GridSize.x;
+            var gridSizeY = HelperSettings.GridSize.y;
             
             var canvasHalfSize = _selectedRootCanvas.pixelRect.size * 0.5f;
             var tx = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.x/gridSizeX) * gridSizeX),-canvasHalfSize.x, canvasHalfSize.x);
@@ -217,7 +217,7 @@ namespace Editor.UIEditor.Assistant
         /// </summary>
         private static void DrawCanvasGrids()
         {
-            if (!UIEditorAssistantSetting.GridVisible)
+            if (!HelperSettings.GridVisible)
             {
                 return;
             }
@@ -228,15 +228,15 @@ namespace Editor.UIEditor.Assistant
                 return;
             }
 
-            var gridSizeX = UIEditorAssistantSetting.GridSizeX;
-            var gridSizeY = UIEditorAssistantSetting.GridSizeY;
+            var gridSizeX = HelperSettings.GridSize.x;
+            var gridSizeY = HelperSettings.GridSize.y;
         
             var rect = canvas.pixelRect;
 
             var halfWidth = rect.width * 0.5f;
             var halfHeight = rect.height * 0.5f;
             
-            Gizmos.color = UIEditorAssistantSetting.GridColor;
+            Gizmos.color = HelperSettings.GridColor;
             
             var lastMatrix = Gizmos.matrix;
             Gizmos.matrix = canvas.transform.localToWorldMatrix;
@@ -271,12 +271,12 @@ namespace Editor.UIEditor.Assistant
         /// </summary>
         private static void DrawElementGuideline()
         {
-            if (!(UIEditorAssistantSetting.GridVisible && UIEditorAssistantSetting.GuideVisible && _selectedUIElement != null))
+            if (!(HelperSettings.GridVisible && HelperSettings.GuideVisible && _selectedUIElement != null))
             {
                 return;
             }
 
-            var color = UIEditorAssistantSetting.GuideColor;
+            var color = HelperSettings.GuideColor;
             var canvasRect = UIUtility.GetCanvasRect(_selectedUIElement);
             const float MAX = 100000f;
             const float MIN = -100000f;

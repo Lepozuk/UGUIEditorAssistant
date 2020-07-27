@@ -1,12 +1,24 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 
 
 [RequireComponent(typeof(RectTransform))]
 public class UIDummy : MonoBehaviour
-{
-    public DummyDefine[] Dummys;
+{   
+    [SerializeField]
+    private List<DummyDefine> _dummys = new List<DummyDefine>();
+    public List<DummyDefine> Dummys
+    {
+        get => _dummys;
+        set
+        {
+            #if UNITY_EDITOR
+                _dummys = value;
+            #endif
+        }
+    }
 }
 
 [Serializable]

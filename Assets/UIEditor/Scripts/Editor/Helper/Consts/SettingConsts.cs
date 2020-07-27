@@ -6,6 +6,9 @@ namespace Editor.UIEditor
             public const string GRID_VISIBLE = "UIEditor.Setting.Assistant.GridVisible";
             public const string GRID_SIZE_X = "UIEditor.Setting.Assistant.GridSize.X";
             public const string GRID_SIZE_Y = "UIEditor.Setting.Assistant.GridSize.Y";
+            
+            public const string GRID_SIZE = "UIEditor.Setting.Assistant.GridSize";
+            
             public const string GRID_COLOR = "UIEditor.Setting.Assistant.GridColor";
             public const string GRID_SNAP = "UIEditor.Setting.Assistant.GridSnap";
             public const string GUIDE_VISIBLE = "UIEditor.Setting.Assistant.GuideVisible";
