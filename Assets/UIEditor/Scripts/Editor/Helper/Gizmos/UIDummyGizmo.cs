@@ -2,23 +2,23 @@ using Editor;
 using UnityEditor;
 using UnityEngine;
 
-namespace UIEditor.Scripts.Editor.Helper
+namespace Editor.UIEditor
 {
-    public class DummyHelper
+    public static class DummyGizmo
     {
         [DrawGizmo(GizmoType.Selected|GizmoType.Active)]
-        private static void DrawDummys(UIDummy component, GizmoType gizmoType)
+        private static void DrawUIDummyGizmo(UIDummy component, GizmoType gizmoType)
         {
             var gameObject = component?.gameObject;
             if (gameObject == null) return;
             
 
-            if (!(UIUtility.TryGetRootCanvas(gameObject, out var canvas) && UIUtility.TryGetRectTransform(gameObject,out var rect)))
+            if (!(CanvasUtil.TryGetRootCanvas(gameObject, out var canvas) && CanvasUtil.TryGetRectTransform(gameObject,out var rect)))
             {
                 return;
             }
 
-            var canvasRect = UIUtility.GetCanvasRect(rect);
+            var canvasRect = CanvasUtil.GetCanvasRect(rect);
             
             var center = canvasRect.Center;
             var mat4x4 = canvas.transform.localToWorldMatrix;

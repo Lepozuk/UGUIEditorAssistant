@@ -1,11 +1,4 @@
-
-#if UNITY_EDITOR
-
-
-// using System.Globalization;
-// using JetBrains.Annotations;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,27 +7,6 @@ namespace Editor.UIEditor
     [CustomEditor(typeof(UIDummy))]
     public class UIDummyEditor : UnityEditor.Editor
     {
-        
-        private static bool IsPrefab(GameObject go)
-        {
-            var correspondingObject = PrefabUtility.GetCorrespondingObjectFromSource(go);
-            var instanceHandle = PrefabUtility.GetPrefabInstanceHandle(go);
-            return correspondingObject != null && instanceHandle != null;
-        }
-
-        //
-        // public UIDummy Dummy
-        // {
-        //     get
-        //     { 
-        //         var mono = target as UIDummy;
-        //         if (mono == null || IsPrefab(mono.gameObject))
-        //         {
-        //             return null;
-        //         }
-        //                 return mono;
-        //     } 
-        // }
         
         private readonly GUIContent DummyLabel = new GUIContent("锚点列表");
 
@@ -46,7 +18,7 @@ namespace Editor.UIEditor
                 return;
             }
 
-            if (IsPrefab(dummyMono.gameObject))
+            if (PrefabUtil.IsPrefab(dummyMono.gameObject))
             {
                 EditorGUILayout.LabelField("请前往Prefab实例内编辑锚点");
                 return;
@@ -85,4 +57,3 @@ namespace Editor.UIEditor
         }
     }
 }
-#endif

@@ -2,15 +2,24 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UIEditor.Assistant
+namespace Editor.UIEditor
 {
-    [InitializeOnLoad]
-    public static class UIEditorAssistant
+    public class SnapHelper
     {   
+        /// <summary>
+        /// 当前选择的根舞台
+        /// </summary>
+        public static Canvas SelectedRootCanvas;
+        
+        /// <summary>
+        /// 当前选择的UI对象
+        /// </summary>
+        public static RectTransform SelectedUIElement;
+        
         /// <summary>
         /// 静态类的构造
         /// </summary>
-        static UIEditorAssistant()
+        public void Init()
         {
             Selection.selectionChanged += SelectionChanged;
 
@@ -22,7 +31,7 @@ namespace Editor.UIEditor.Assistant
         /// <summary>
         /// 创建一个只在编辑器周期存在的gizmo辅助，后续逻辑看OnDrawGizmo
         /// </summary>
-        private static void CreateUIEditorAssistantGizmoDrawer()
+        private void CreateUIEditorAssistantGizmoDrawer()
         {
             var obj = GameObject.Find("UIEditorAssistant");
             if(obj == null) {
@@ -37,26 +46,17 @@ namespace Editor.UIEditor.Assistant
             obj.hideFlags = HideFlags.DontSaveInEditor;
         }
 
-        /// <summary>
-        /// 当前选择的根舞台
-        /// </summary>
-        private static Canvas _selectedRootCanvas;
-        
-        /// <summary>
-        /// 当前选择的UI对象
-        /// </summary>
-        private static RectTransform _selectedUIElement;
         
         /// <summary>
         /// 当前选择的对象发生更改
         /// </summary>
-        private static void SelectionChanged()
+        private void SelectionChanged()
         {
             var obj = Selection.activeObject;
             if (! ( obj != null &&
-                UIUtility.TryGetRectTransform(obj as GameObject, out _selectedUIElement) &&
-                UIUtility.TryGetRootCanvas(_selectedUIElement.gameObject, out _selectedRootCanvas) && 
-                _selectedUIElement.gameObject != _selectedRootCanvas.gameObject ) )
+                CanvasUtil.TryGetRectTransform(obj as GameObject, out SelectedUIElement) &&
+                CanvasUtil.TryGetRootCanvas(SelectedUIElement.gameObject, out SelectedRootCanvas) && 
+                SelectedUIElement.gameObject != SelectedRootCanvas.gameObject ) )
             {
                 OnDeselect();
             }
@@ -65,10 +65,10 @@ namespace Editor.UIEditor.Assistant
         /// <summary>
         /// 取消选择
         /// </summary>
-        private static void OnDeselect()
+        private void OnDeselect()
         {
-            _selectedUIElement = null;
-            _selectedRootCanvas = null;
+            SelectedUIElement = null;
+            SelectedRootCanvas = null;
         }
         
 
@@ -78,14 +78,14 @@ namespace Editor.UIEditor.Assistant
         /// <summary>
         /// 编辑器模式下每帧调用
         /// </summary>
-        private static void OnSceneGUI(SceneView view)
+        private void OnSceneGUI(SceneView view)
         {
-            if (!(Application.isEditor && _selectedUIElement != null))
+            if (!(Application.isEditor && SelectedUIElement != null))
             {
                 return;
             }
             
-            EventType type = Event.current.type;
+            var type = Event.current.type;
             switch (type)
             {
                 case EventType.KeyDown:
@@ -132,7 +132,7 @@ namespace Editor.UIEditor.Assistant
         }
 
         
-        private static void MoveElementByGridStep(Vector3 direction)
+        private void MoveElementByGridStep(Vector3 direction)
         {
             if (!GetCorrectElementPosition(out var canvasRect, out var position))
             {
@@ -145,32 +145,32 @@ namespace Editor.UIEditor.Assistant
             offset.Scale(direction);
             position += offset;
 
-            ChangeElementPositionFromGrid(_selectedUIElement, canvasRect, position);
+            ChangeElementPositionFromGrid(SelectedUIElement, canvasRect, position);
             DoSnapElementToGrid();
         }
 
-        private static void DoSnapElementToGrid()
+        private void DoSnapElementToGrid()
         {
             if (!GetCorrectElementPosition(out var canvasRect, out var position))
             {
                 return;
             }
 
-            ChangeElementPositionFromGrid(_selectedUIElement, canvasRect, position);
+            ChangeElementPositionFromGrid(SelectedUIElement, canvasRect, position);
         }
 
 
-        private static void ChangeElementPositionFromGrid(RectTransform transform, CanvasRect canvasRect,
+        private void ChangeElementPositionFromGrid(RectTransform transform, CanvasRect canvasRect,
             Vector3 targetPos)
         {
-            targetPos = _selectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(targetPos);
+            targetPos = SelectedRootCanvas.transform.localToWorldMatrix.MultiplyPoint(targetPos);
             targetPos.x -= canvasRect.PivotToSide.x;
             targetPos.y -= canvasRect.PivotToSide.w;
 
-            _selectedUIElement.position = targetPos;
+            SelectedUIElement.position = targetPos;
         }
         
-        private static bool GetCorrectElementPosition(out CanvasRect canvasRect, out Vector3 position)
+        private bool GetCorrectElementPosition(out CanvasRect canvasRect, out Vector3 position)
         {
             canvasRect = new CanvasRect();
             position = Vector3.zero;
@@ -180,7 +180,7 @@ namespace Editor.UIEditor.Assistant
                 return false;
             }
             
-            canvasRect = UIUtility.GetCanvasRect(_selectedUIElement);
+            canvasRect = CanvasUtil.GetCanvasRect(SelectedUIElement);
             
             var rect = canvasRect.Rect;
             
@@ -189,7 +189,7 @@ namespace Editor.UIEditor.Assistant
             var gridSizeX = HelperSettings.GridSize.x;
             var gridSizeY = HelperSettings.GridSize.y;
             
-            var canvasHalfSize = _selectedRootCanvas.pixelRect.size * 0.5f;
+            var canvasHalfSize = SelectedRootCanvas.pixelRect.size * 0.5f;
             var tx = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.x/gridSizeX) * gridSizeX),-canvasHalfSize.x, canvasHalfSize.x);
             var ty = Mathf.Clamp(Convert.ToInt32(Mathf.Round(topLeft.y/gridSizeY) * gridSizeY),-canvasHalfSize.y, canvasHalfSize.y);
             
@@ -197,106 +197,6 @@ namespace Editor.UIEditor.Assistant
 
             return true;
         }
-        
-        ///////////////////////////////////////////////////////////////////////////////////
-        /// 画辅助线 ///////////////////////////////////////////////////////////////////////
-        ///////////////////////////////////////////////////////////////////////////////////
-        /// <summary>
-        /// 隐式置入Gizmo阶段
-        /// </summary>
-        [DrawGizmo(GizmoType.NonSelected | GizmoType.Active)]
-        private static void OnDrawGizmo(UIEditorAssistant_GizmoDrawer drawer, GizmoType gizmoType)
-        {
-            DrawCanvasGrids();
-            DrawElementGuideline();
-        }
-        
-        ////////////////////////////////////////////////////////////////////////////////////
-        /// <summary>
-        /// 画当前根舞台的网格
-        /// </summary>
-        private static void DrawCanvasGrids()
-        {
-            if (!HelperSettings.GridVisible)
-            {
-                return;
-            }
-            
-            var canvas = _selectedRootCanvas;
-            if (canvas == null || canvas.renderMode == RenderMode.WorldSpace)
-            {
-                return;
-            }
-
-            var gridSizeX = HelperSettings.GridSize.x;
-            var gridSizeY = HelperSettings.GridSize.y;
-        
-            var rect = canvas.pixelRect;
-
-            var halfWidth = rect.width * 0.5f;
-            var halfHeight = rect.height * 0.5f;
-            
-            Gizmos.color = HelperSettings.GridColor;
-            
-            var lastMatrix = Gizmos.matrix;
-            Gizmos.matrix = canvas.transform.localToWorldMatrix;
-            
-            
-            /// 画竖线
-            Gizmos.DrawLine(new Vector3( 0, -halfHeight,0), new Vector3(0, halfHeight ,0));
-            for( var x = gridSizeX; x < halfWidth; x+=gridSizeX)
-            {
-                Gizmos.DrawLine(new Vector3(  x, -halfHeight,0), new Vector3(  x, halfHeight ,0));
-                Gizmos.DrawLine(new Vector3( -x, -halfHeight,0), new Vector3( -x, halfHeight ,0));
-            }
-            Gizmos.DrawLine(new Vector3(  halfWidth, -halfHeight,0), new Vector3( halfWidth, halfHeight ,0));
-            Gizmos.DrawLine(new Vector3( -halfWidth, -halfHeight,0), new Vector3(-halfWidth, halfHeight ,0));
-            
-            
-            /// 画横线
-            Gizmos.DrawLine(new Vector3( -halfWidth, 0,0), new Vector3(halfWidth, 0 ,0));
-            for( var y = gridSizeY; y < halfHeight; y+=gridSizeY)
-            {
-                Gizmos.DrawLine(new Vector3( -halfWidth,  y,0), new Vector3(halfWidth,  y,0));
-                Gizmos.DrawLine(new Vector3( -halfWidth, -y,0), new Vector3(halfWidth, -y,0));
-            }
-            Gizmos.DrawLine(new Vector3( -halfWidth,  halfHeight,0), new Vector3( halfWidth,  halfHeight,0));
-            Gizmos.DrawLine(new Vector3( -halfWidth, -halfHeight,0), new Vector3( halfWidth, -halfHeight,0));
-
-            Gizmos.matrix = lastMatrix;
-        }
-        
-        /// <summary>
-        /// 画当前UI单元的辅助线
-        /// </summary>
-        private static void DrawElementGuideline()
-        {
-            if (!(HelperSettings.GridVisible && HelperSettings.GuideVisible && _selectedUIElement != null))
-            {
-                return;
-            }
-
-            var color = HelperSettings.GuideColor;
-            var canvasRect = UIUtility.GetCanvasRect(_selectedUIElement);
-            const float MAX = 100000f;
-            const float MIN = -100000f;
-            
-            var oldMatrix = Gizmos.matrix;
-            Gizmos.color = color;
-            
-            Gizmos.matrix = _selectedRootCanvas.transform.localToWorldMatrix;
-
-            var rect = canvasRect.Rect;
-            
-            Gizmos.DrawLine(new Vector3(rect.xMin, MIN, 0f), new Vector3(rect.xMin, MAX, 0f));
-            Gizmos.DrawLine(new Vector3(rect.xMax, MIN, 0f), new Vector3(rect.xMax, MAX, 0f));
-            
-            Gizmos.DrawLine(new Vector3(MIN, rect.yMin, 0f), new Vector3(MAX, rect.yMin, 0f));
-            Gizmos.DrawLine(new Vector3(MIN, rect.yMax, 0f), new Vector3(MAX, rect.yMax, 0f));
-
-            Gizmos.matrix = oldMatrix;
-        }
-
         
 
     }

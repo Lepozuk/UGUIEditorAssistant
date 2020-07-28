@@ -4,30 +4,35 @@ using UnityEngine;
 
 namespace Editor.UIEditor
 {
-    public static class DragHelper
+    public class DragHelper
     {
-        [InitializeOnLoadMethod]
-        static void Init()
+        
+        public void Init()
         {
             SceneView.duringSceneGui += OnSceneGUI;
         }
 
-        static void OnSceneGUI(SceneView sceneView)
+        private void OnSceneGUI(SceneView sceneView)
         {
             //当松开鼠标时
-            if (Event.current.type == EventType.DragPerform && DragAndDrop.objectReferences.Length == 1) {
-                DragAndDrop.AcceptDrag();
-                if (HandleDragAsset(sceneView, DragAndDrop.objectReferences[0]))
-                {
-                    Event.current.Use();
-                } 
+            if (Event.current.type != EventType.DragPerform || DragAndDrop.objectReferences.Length != 1) return;
+            
+            DragAndDrop.AcceptDrag();
+            if (HandleDragAsset(sceneView, DragAndDrop.objectReferences[0]))
+            {
+                Event.current.Use();
             }
         }
         
-        static bool HandleDragAsset(SceneView sceneView, Object handleObj)
+        public bool HandleDragAsset(SceneView sceneView, Object handleObj)
         {
-            Event e = Event.current;
-            Camera cam = sceneView.camera;
+            if (handleObj == null)
+            {
+                return false;
+            }
+            
+            var e = Event.current;
+            var cam = sceneView.camera;
             Vector3 mouse_abs_pos = e.mousePosition;
             mouse_abs_pos.y = cam.pixelHeight - mouse_abs_pos.y;
             mouse_abs_pos = sceneView.camera.ScreenToWorldPoint(mouse_abs_pos);
@@ -67,13 +72,13 @@ namespace Editor.UIEditor
         }
         
         //生成parent下的唯一控件名
-        public static string GenerateUniqueName(GameObject parent, string type)
+        private string GenerateUniqueName(GameObject parent, string type)
         {
             var widgets = parent.GetComponentsInChildren<RectTransform>();
-            int test_num = 1;
-            string test_name = type+"_"+test_num;
+            var test_num = 1;
+            var test_name = type+"_"+test_num;
             RectTransform uiBase = null;
-            int prevent_death_count = 0;//防止死循环
+            var prevent_death_count = 0;//防止死循环
             do {
                 test_name = type+"_"+test_num;
                 uiBase = System.Array.Find(widgets, p => p.gameObject.name==test_name);
@@ -85,7 +90,7 @@ namespace Editor.UIEditor
             return test_name;
         }
         
-        static public Transform GetContainerUnderMouse(Vector3 mouse_abs_pos, GameObject ignore_obj = null)
+        private Transform GetContainerUnderMouse(Vector3 mouse_abs_pos, GameObject ignore_obj = null)
         {
             var act = Selection.activeObject as GameObject;
             if (act != null && act.TryGetComponent<RectTransform>(out var rectTrans))
@@ -93,14 +98,14 @@ namespace Editor.UIEditor
                 return rectTrans;
             }
             
-            List<RectTransform> list = new List<RectTransform>();
-            Canvas[] containers = Transform.FindObjectsOfType<Canvas>();
-            Vector3[] corners = new Vector3[4];
+            var list = new List<RectTransform>();
+            var containers = Transform.FindObjectsOfType<Canvas>();
+            var corners = new Vector3[4];
             foreach (var item in containers)
             {
                 if (ignore_obj == item.gameObject )
                     continue;
-                RectTransform trans = item.transform as RectTransform;
+                var trans = item.transform as RectTransform;
                 if (trans != null)
                 {
                     //获取节点的四个角的世界坐标，分别按顺序为左下左上，右上右下
@@ -119,10 +124,10 @@ namespace Editor.UIEditor
             return GetRootLayout(list[0]);
         }
 
-        public static Transform GetRootLayout(Transform trans)
+        private Transform GetRootLayout(Transform trans)
         {
             Transform result = null;
-            Canvas canvas = trans.GetComponentInParent<Canvas>();
+            var canvas = trans.GetComponentInParent<Canvas>();
             if (canvas != null)
             {
                 foreach (var item in canvas.transform.GetComponentsInChildren<RectTransform>())

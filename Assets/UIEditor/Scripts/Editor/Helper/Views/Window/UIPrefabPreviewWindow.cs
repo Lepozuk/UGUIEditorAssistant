@@ -75,7 +75,7 @@ namespace Editor.UIEditor {
 			set => SetGenericData(PrefabHelperDragItemKey, value);
 		}
 		
-		private readonly string PreviewTextureSavePath = "../Caches/PrefabPreview/UIAssistant";
+		private readonly string PreviewTextureSavePath = "../Caches/Textures/UIHelper/PrefabPreview";
 		
 		private readonly List<int> _currentDisplayItems = new List<int>();
 		private readonly List<PrefabItem> _selections = new List<PrefabItem>();
@@ -146,7 +146,7 @@ namespace Editor.UIEditor {
 		
 		private void AddGUID (string guid)
 		{
-			var go = PrefabHelperUtil.GUIDToObject<GameObject>(guid);
+			var go = PrefabUtil.GUIDToObject<GameObject>(guid);
 
 			if (go == null || !go.TryGetComponent<RectTransform>(out var rect))
 			{
@@ -227,17 +227,17 @@ namespace Editor.UIEditor {
 	        var listTexPath = Path.Combine(Application.dataPath, relativeSavePath + "_s.png");
 	        var prevTexPath = Path.Combine(Application.dataPath, relativeSavePath + "_l.png");
 	        if (isReCreate) DestroyTexture(item.ListTex);
-	        item.ListTex = GenerateTexture(listTexPath, isReCreate, item.Prefab, PrefabHelperUtil.GetUIPrefabListTexture);
+	        item.ListTex = GenerateTexture(listTexPath, isReCreate, item.Prefab, PrefabUtil.GetUIPrefabListTexture);
 	        
 	        if (isReCreate) DestroyTexture(item.PreviewTex);
-	        item.PreviewTex = GenerateTexture(prevTexPath, isReCreate, item.Prefab, PrefabHelperUtil.GetUIPrefabPreviewTexture);
+	        item.PreviewTex = GenerateTexture(prevTexPath, isReCreate, item.Prefab, PrefabUtil.GetUIPrefabPreviewTexture);
 		}
 
 		private Texture GenerateTexture(string texFilePath, bool isReCreate, GameObject prefab, Func<GameObject, Texture> generateFactory)
 		{
 			if (!isReCreate && File.Exists(texFilePath))
 			{
-				return PrefabHelperUtil.LoadTextureInLocal(texFilePath);;
+				return PrefabUtil.LoadTextureInLocal(texFilePath);;
 			}
 
 			var tex = generateFactory.Invoke(prefab);
@@ -245,7 +245,7 @@ namespace Editor.UIEditor {
 			{
 				return null;
 			}
-			PrefabHelperUtil.SaveTextureToPNG(tex, texFilePath);
+			PrefabUtil.SaveTextureToPNG(tex, texFilePath);
 			
 			return tex;
 		}
@@ -491,7 +491,7 @@ namespace Editor.UIEditor {
 
 						item.ListItemRect = itemBoxRectCheck;
 						
-						GUI.DrawTexture(iconRect, PrefabHelperUtil.BackdropTexture);
+						GUI.DrawTexture(iconRect, PrefabUtil.BackdropTexture);
 						GUI.DrawTexture(iconRect, item.ListTex);
 					}
 					else
@@ -541,8 +541,8 @@ namespace Editor.UIEditor {
 		        outlineRect.width += 8;
 		        outlineRect.height += 8;
 		        
-		        GUI.DrawTexture(outlineRect, PrefabHelperUtil.BorderTexture);
-		        GUI.DrawTexture(toolTipRect, PrefabHelperUtil.BackdropTexture);
+		        GUI.DrawTexture(outlineRect, PrefabUtil.BorderTexture);
+		        GUI.DrawTexture(toolTipRect, PrefabUtil.BackdropTexture);
 		        GUI.DrawTexture(toolTipRect, previewTex);
 	        }
 	        

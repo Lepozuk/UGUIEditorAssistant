@@ -2,7 +2,7 @@ using System;
 using UnityEditor;
 using UnityEngine;
 
-namespace Editor.UIEditor.Assistant
+namespace Editor.UIEditor
 {
     public class UIHelperSettingWindow : EditorWindow
     {
@@ -12,6 +12,7 @@ namespace Editor.UIEditor.Assistant
             vec2.y = Convert.ToInt32(vec2.y / size) * size;
             return vec2;
         }
+        
         private void OnGUI()
         {
             // 网格大小

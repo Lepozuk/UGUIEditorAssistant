@@ -9,8 +9,19 @@ namespace Editor.UIEditor
         private static List<string> mEntries = new List<string>();
         private static GenericMenu mMenu;
 
+        public static void AddSeparator(string path)
+        {
+            if (mMenu == null)
+            {
+                mMenu = new GenericMenu();
+            }
+            mMenu.AddSeparator(path);
+        }
+
+
         public static void AddItem(string item, bool isChecked, GenericMenu.MenuFunction2 callback, object args)
         {
+            
             if (callback != null)
             {
                 if (mMenu == null)
@@ -35,6 +46,7 @@ namespace Editor.UIEditor
                 }
 	            
                 mMenu.AddItem(new GUIContent(item), isChecked, callback, args);
+                
             }
             else
             {

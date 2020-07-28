@@ -7,9 +7,16 @@ using Object = UnityEngine.Object;
 
 namespace Editor.UIEditor
 {
-    public static class PrefabHelperUtil
+    public static class PrefabUtil
     {
-        
+
+        public static bool IsPrefab(GameObject go)
+        {
+            var correspondingObject = PrefabUtility.GetCorrespondingObjectFromSource(go);
+            var instanceHandle = PrefabUtility.GetPrefabInstanceHandle(go);
+            return correspondingObject != null && instanceHandle != null;
+        }
+
         private static Texture2D mBackdropTex, mBorderTex;
         public static Texture2D BackdropTexture => mBackdropTex ?? (mBackdropTex = CreateCheckerTex(new Color(0.33f, 0.33f, 0.33f, 1f), 1,1 ));
         public static Texture2D BorderTexture => mBorderTex ?? (mBorderTex = CreateCheckerTex(new Color(0f, 0f, 0f, 1f), 1,1 ));

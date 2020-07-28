@@ -3,9 +3,9 @@ using System.IO;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace UIEditor.Scripts.Editor.Helper.Utils
+namespace Editor.UIEditor
 {
-    public class PreviewTextureUtil
+    public class TextureUtil
     {
         
         public Texture2D LoadTextureInLocal(string file_path)
