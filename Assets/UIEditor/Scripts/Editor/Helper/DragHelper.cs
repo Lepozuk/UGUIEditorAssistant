@@ -44,7 +44,7 @@ namespace Editor.UIEditor
             }
             
             var prefabObj = handleObj as GameObject;
-            if (prefabObj != null || !prefabObj.TryGetComponent<RectTransform>(out var rectTrans))
+            if (prefabObj != null && prefabObj.TryGetComponent<RectTransform>(out var rectTrans))
             {
                 Transform parentTrans = GetContainerUnderMouse(mouse_abs_pos);
                 
@@ -109,11 +109,12 @@ namespace Editor.UIEditor
                 if (trans != null)
                 {
                     //获取节点的四个角的世界坐标，分别按顺序为左下左上，右上右下
-                    trans.GetWorldCorners(corners);
-                    if (mouse_abs_pos.x >= corners[0].x && mouse_abs_pos.y <= corners[1].y && mouse_abs_pos.x <= corners[2].x && mouse_abs_pos.y >= corners[3].y)
-                    {
-                        list.Add(trans);
-                    }
+                    // trans.GetWorldCorners(corners);
+                    // if (mouse_abs_pos.x >= corners[0].x && mouse_abs_pos.y <= corners[1].y && mouse_abs_pos.x <= corners[2].x && mouse_abs_pos.y >= corners[3].y)
+                    // {
+                    //     list.Add(trans);
+                    // }
+                    list.Add(trans);
                 }
             }
             

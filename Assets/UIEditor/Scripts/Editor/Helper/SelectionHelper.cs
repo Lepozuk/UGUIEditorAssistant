@@ -37,14 +37,21 @@ namespace Editor.UIEditor
     {
         private void Update()
         {
-            
+            var hasChanged = false;
             var list = new List<GameObject>();
             foreach (var obj in Selection.gameObjects)
             {
-                if (CheckIsUIPrefab(obj))
+                if (CheckIsUIPrefab(obj, out var prefabObj))
                 {
-                    var prefabObj = PrefabUtility.GetOutermostPrefabInstanceRoot(obj);
-                    list.Add(prefabObj);
+                    if (prefabObj != obj)
+                    {
+                        hasChanged = true;
+                    }
+
+                    if (list.IndexOf(prefabObj) < 0)
+                    {
+                        list.Add(prefabObj);
+                    }
                 }
                 else
                 {
@@ -52,17 +59,21 @@ namespace Editor.UIEditor
                 }
             }
 
-            Selection.objects = list.ToArray();
+            if (hasChanged)
+            {
+                Selection.objects = list.ToArray();
+            }
             
         }
 
-        private bool CheckIsUIPrefab(GameObject obj)
+        private bool CheckIsUIPrefab(GameObject obj, out GameObject prefabObj)
         {
+            prefabObj = null;
             if (obj == null)
             {
                 return false;
             }
-            if (!obj.TryGetComponent<RectTransform>(out var rectTrans) || obj.TryGetComponent<Canvas>(out var canvas))
+            if (!obj.TryGetComponent<RectTransform>(out var rectTrans))
             {
                 return false;
             }
@@ -71,7 +82,15 @@ namespace Editor.UIEditor
             {
                 return false;
             }
-
+            prefabObj = PrefabUtility.GetOutermostPrefabInstanceRoot(obj);
+            if (prefabObj.TryGetComponent<Canvas>(out var canvas))
+            {
+                if (canvas.isRootCanvas)
+                {
+                    return false;
+                }
+            }
+            
             return true;
         }
         
