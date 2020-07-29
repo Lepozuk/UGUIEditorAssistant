@@ -200,6 +200,6 @@ namespace Editor.UIEditor
         
 
     }
+    public class UIEditorAssistant_GizmoDrawer : MonoBehaviour { }
 }
 
-class UIEditorAssistant_GizmoDrawer : MonoBehaviour { }

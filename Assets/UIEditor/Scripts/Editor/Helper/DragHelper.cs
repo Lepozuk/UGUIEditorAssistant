@@ -24,7 +24,7 @@ namespace Editor.UIEditor
             }
         }
         
-        public bool HandleDragAsset(SceneView sceneView, Object handleObj)
+        private bool HandleDragAsset(SceneView sceneView, Object handleObj)
         {
             if (handleObj == null)
             {

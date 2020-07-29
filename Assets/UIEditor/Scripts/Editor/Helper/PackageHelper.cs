@@ -13,10 +13,8 @@ namespace Editor.UIEditor
     {
         private DragHelper mDrag;
         
-        public void Init(DragHelper drag)
+        public void Init()
         {
-            mDrag = drag;
-            
             SceneView.duringSceneGui += OnSceneGUI;
         }
 
@@ -116,7 +114,7 @@ namespace Editor.UIEditor
             //
             Debug.Log("SavePrefab:'" + path  + "' with filename:'" + fileName + "'");
 
-            if (MakeGroup(gameobjects, fileName, out var root))
+            if (Pack(gameobjects, fileName, out var root))
             {
                 PrefabUtility.SaveAsPrefabAsset(root, path);
                 AssetDatabase.Refresh();
@@ -130,7 +128,7 @@ namespace Editor.UIEditor
             }
         }
 
-        private bool MakeGroup(List<GameObject> gameObjects, string name, out GameObject groupRoot)
+        private bool Pack(List<GameObject> gameObjects, string name, out GameObject groupRoot)
         {
             groupRoot = null;
             if (gameObjects == null || gameObjects.Count == 0)

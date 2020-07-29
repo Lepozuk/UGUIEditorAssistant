@@ -7,14 +7,13 @@ namespace Editor.UIEditor
         [InitializeOnLoadMethod]
         public static void Init()
         {
-            var dragHelper = new DragHelper();
-            dragHelper.Init();
+            new DragHelper().Init();
             
-            var snapHelper = new SnapHelper();
-            snapHelper.Init();
+            new SnapHelper().Init();
             
-            var packageHelper = new PackageHelper();
-            packageHelper.Init(dragHelper);
+            new PackageHelper().Init();
+            
+            new SelectionHelper().Init();
         }
     }
 }
