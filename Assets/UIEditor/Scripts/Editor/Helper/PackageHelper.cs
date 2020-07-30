@@ -5,13 +5,12 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using UnityEditor;
-using UnityEditor.VersionControl;
+
 using UnityEngine;
 
 namespace Editor.UIEditor
 {
-    public class PackageHelper
-    {
+    public class PackageHelper    {
         private DragHelper mDrag;
         
         public void Init()
