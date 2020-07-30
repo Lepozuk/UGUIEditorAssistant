@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using UnityEditor;
+using UnityEditor.VersionControl;
 using UnityEngine;
 
 namespace Editor.UIEditor
@@ -92,9 +93,9 @@ namespace Editor.UIEditor
             GameObject.DestroyImmediate(gameObj);
         }
 
-        private void PackageAtom(object arg) => SavePrefabWindow.ShowPopup("原子", CheckNameAlreadyExist, SavePrefab, new object[] { HelperSettings.AtomPath, arg });
+        private void PackageAtom(object arg) => SavePrefabWindow.ShowPopup("原子", CheckNameAlreadyExist, SavePrefab, new object[] { HelperSettings.AtomPath, arg, "原子" });
         
-        private void PackageModule(object arg) => SavePrefabWindow.ShowPopup("模组", CheckNameAlreadyExist, SavePrefab, new object[] {HelperSettings.ModulePath, arg});
+        private void PackageModule(object arg) => SavePrefabWindow.ShowPopup("模组", CheckNameAlreadyExist, SavePrefab, new object[] {HelperSettings.ModulePath, arg, "原子"});
 
        
         private bool CheckNameAlreadyExist(string name)
@@ -102,6 +103,19 @@ namespace Editor.UIEditor
             return false;
         }
 
+        private void CreateFolder(string basePath, string targetPath)
+        {
+            var subFolderPath = Path.GetDirectoryName(targetPath).Substring(basePath.Length + 1);
+            Debug.Log(subFolderPath);
+            var waitForCreateFolders = subFolderPath.Split(Path.DirectorySeparatorChar);
+            
+            for (var i = 0; i < waitForCreateFolders.Length; i++)
+            {
+                AssetDatabase.CreateFolder(basePath, waitForCreateFolders[i]);
+                basePath = Path.Combine(basePath, waitForCreateFolders[i]);
+            }
+        }
+        
         private void SavePrefab(string name, object param0)
         {
             object[] args = (object[])param0;
@@ -109,22 +123,28 @@ namespace Editor.UIEditor
             var gameobjects = (List<GameObject>) args[1];
             
             var fileName = Path.GetFileName(name);
-            var path = Path.Combine(folderPath, name) + ".prefab";
+            var assetPath = Path.Combine(folderPath, name) + ".prefab";
             
-            //
-            Debug.Log("SavePrefab:'" + path  + "' with filename:'" + fileName + "'");
-
+            CreateFolder(folderPath, assetPath);
+            
             if (Pack(gameobjects, fileName, out var root))
             {
-                PrefabUtility.SaveAsPrefabAsset(root, path);
-                AssetDatabase.Refresh();
-                
-                var prefabAsset = AssetDatabase.LoadMainAssetAtPath(path);
-                var prefabObj = (GameObject)PrefabUtility.InstantiatePrefab(prefabAsset);
-                prefabObj.transform.SetParent(root.transform.parent);
-                prefabObj.transform.localPosition = root.transform.localPosition;
-                GameObject.DestroyImmediate(root);
-                
+                try
+                {
+                    PrefabUtility.SaveAsPrefabAsset(root, assetPath);
+                    AssetDatabase.Refresh();
+                    
+                    var prefabAsset = AssetDatabase.LoadMainAssetAtPath(assetPath);
+                    var prefabObj = (GameObject)PrefabUtility.InstantiatePrefab(prefabAsset);
+                    prefabObj.transform.SetParent(root.transform.parent);
+                    prefabObj.transform.localPosition = root.transform.localPosition;
+                    GameObject.DestroyImmediate(root);
+                }
+                catch (Exception e)
+                {
+                    EditorUtility.DisplayDialog("出错了", "创建" + args[2] + ": '"+Path.GetFileName(assetPath)+"' 失败了", "好的");
+                    Unpack(root);
+                }
             }
         }
 
