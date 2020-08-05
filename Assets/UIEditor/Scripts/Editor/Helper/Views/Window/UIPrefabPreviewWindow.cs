@@ -6,6 +6,7 @@ using System.Collections.Generic;
 
 using System.IO;
 using System.Linq;
+using Editor.UIEditor;
 using static UnityEditor.DragAndDrop;
 
 namespace Editor.UIEditor {
@@ -13,30 +14,49 @@ namespace Editor.UIEditor {
 	
 	public class UIPrefabPreviewWindow : EditorWindow
 	{
-		private class PrefabItem
-		{
-			public GameObject Prefab;
-			public Texture ListTex;
-			public Texture PreviewTex;
-			public string Guid;
-			public Rect ListItemRect;
-		}
-
-		private const int TopPadding = 24;
-		private const int CellPadding = 4;
-	    private const int CellSize = 90;
+		private const int TOP_PADDING = 24;
+		
+		private const int CELL_PADDING = 4;
+		
+	    private const int CELL_SIZE = 90;
 	    
-		private int TabIndex = 0;
+		private const int LABEL_AREA_HEIGHT = 48;
 		
-		private Vector2 GUIPos = Vector2.zero;
-		
-		private GUIContent Content;
-		private GUIStyle TextCenterStyle;
+		private const float DOUBLE_CLICK_CHECK_VALUE = 0.05f;
 
-		/// <summary>
+	    /// <summary>
 		/// 当前分类下所包含的UI预制件
 		/// </summary>
 		private readonly List<PrefabItem> PrefabItemsInCurrentTab = new List<PrefabItem>();
+
+	    private readonly Dictionary<string, List<PrefabItem>> PrefabItemsInFolders = new Dictionary<string, List<PrefabItem>>();
+	    
+		private readonly List<PrefabItem> PrefabItemsByFiltered = new List<PrefabItem>();
+		
+		private readonly List<int> CurrentDisplayItems = new List<int>();
+		
+		
+		private string mFindPrefabKey;
+		
+		private string[] mAssetPaths;
+
+		private Vector2 mLastMousePos;
+		
+		private int mTabIndex = 0;
+		
+		private Vector2 mListPos = Vector2.zero;
+		
+		private float mLastMouseDownTime = 0f;
+		
+		private PrefabItem mCurrHoverItem;
+		
+		private PrefabItem mLastHoverItem;
+		
+		private bool DraggedObjectIsOurs
+		{
+			get => GetGenericData("PrefabHelper.DragItem") != null;
+			set => SetGenericData("PrefabHelper.DragItem", value);
+		}
 		
 		/// <summary>
 		/// 当前正在拖动的对象
@@ -67,28 +87,10 @@ namespace Editor.UIEditor {
 				}
 			}
 		}
-
-		private readonly string PrefabHelperDragItemKey = "PrefabHelper.DragItem";
-		private bool DraggedObjectIsOurs
-		{
-			get => GetGenericData(PrefabHelperDragItemKey) != null;
-			set => SetGenericData(PrefabHelperDragItemKey, value);
-		}
 		
-		private readonly string PreviewTextureSavePath = "../Caches/Textures/UIHelper/PrefabPreview";
-		
-		private readonly List<int> _currentDisplayItems = new List<int>();
-		private readonly List<PrefabItem> _selections = new List<PrefabItem>();
-		private const int labelAreaHeight = 48;
-		private string FindPrefabKey;
-		
-		private string[] AssetPaths;
-
-		private const string ATOM_PATH = "UIPrefabHelper.AtomPath";
-		private const string MODULE_PATH = "UIPrefabHelper.ModulePath";
 		private void InitAssetPaths()
 		{
-			AssetPaths = new[]
+			mAssetPaths = new[]
 			{
 				HelperSettings.AtomPath,
 				HelperSettings.ModulePath
@@ -99,24 +101,14 @@ namespace Editor.UIEditor {
 		{
 			InitAssetPaths();
 			
-			TabIndex = 0;
-			Load(TabIndex);
-			
-			TextCenterStyle = new GUIStyle();
-			TextCenterStyle.alignment = TextAnchor.MiddleCenter;
-			TextCenterStyle.padding = new RectOffset(2, 2, 2, 2);
-			TextCenterStyle.clipping = TextClipping.Clip;
-			TextCenterStyle.wordWrap = true;
-			TextCenterStyle.stretchWidth = false;
-			TextCenterStyle.stretchHeight = false;
-			TextCenterStyle.normal.textColor = EditorGUIUtility.isProSkin ? new Color(1f, 1f, 1f, 0.5f) : new Color(0f, 0f, 0f, 0.5f);
-			TextCenterStyle.normal.background = null;
+			mTabIndex = 0;
+			Load(mTabIndex);
 		}
 
 		private void OnFocus()
 		{
 			InitAssetPaths();
-			Load(TabIndex);
+			Load(mTabIndex);
 		}
 
 		private void OnDisable ()
@@ -136,15 +128,21 @@ namespace Editor.UIEditor {
 
 		private void ClearItemCache()
 		{
-			foreach (PrefabItem item in PrefabItemsInCurrentTab)
+			foreach (var item in PrefabItemsInCurrentTab)
 			{
-				DestroyTexture(item.ListTex);
+				DestroyTexture(ref item.ListTex);
 			}
-
 			PrefabItemsInCurrentTab.Clear();
+
+			foreach (var pair in PrefabItemsInFolders)
+			{
+				pair.Value.Clear();
+			}
+			PrefabItemsInFolders.Clear();
+			
 		}
-		
-		private void AddGUID (string guid)
+
+		private void AddGUID(string guid, string fromRootFolder)
 		{
 			var go = PrefabUtil.GUIDToObject<GameObject>(guid);
 
@@ -153,68 +151,81 @@ namespace Editor.UIEditor {
 				return;
 			}
 	        
-			var item = new PrefabItem { Prefab = go, Guid = guid };
-	        
-			PrefabItemsInCurrentTab.Add(item);
-	        
+			PrefabItemsInCurrentTab.Add(new PrefabItem { Prefab = go, Guid = guid });
+
+			var relativePath = AssetDatabase.GetAssetPath(go).Substring(fromRootFolder.Length + 1);
+			var pathArr = relativePath.Split(Path.DirectorySeparatorChar);
+			if (!PrefabItemsInFolders.TryGetValue(pathArr[0], out var list))
+			{
+				list = new List<PrefabItem>();
+				PrefabItemsInFolders.Add(pathArr[0], list);
+			}
+
 		}
 
 		private void RefreshItemTex(object obj)
 		{
-			if (this == null) return;
+			if (this == null)
+			{
+				return;
+			}
+			
 			var index = (int)obj;
-			if (index >= PrefabItemsInCurrentTab.Count || index <= -1) return;
+			if (index >= PrefabItemsInCurrentTab.Count || index <= -1)
+			{
+				return;
+			}
 			
 			var item = PrefabItemsInCurrentTab[index];
 			
-			GeneratePreview(item);
+			GeneratePreviewTex(item);
 		}
 		
-		private PrefabItem FindItem (GameObject go)
-		{
-			foreach (var item in PrefabItemsInCurrentTab)
-			{
-				if (item.Prefab == go)
-				{
-					return item;
-				}
-			}
-
-			return null;
-		}
-
 		private void Load (int tabIndex)
 		{
-			if (tabIndex < 0 || tabIndex >= AssetPaths.Length) return;
+			if (tabIndex < 0 || tabIndex >= mAssetPaths.Length) return;
 
 			ClearItemCache();
 			
-			var folderPath = AssetPaths[tabIndex];
+			var folderPath = mAssetPaths[tabIndex];
 			
 			
 			var guidArr = AssetDatabase.FindAssets("t:prefab", new string[] {folderPath});
 			foreach (var guid in guidArr)
 			{
-				AddGUID(guid);
+				AddGUID(guid, folderPath);
 			}
 		}
 
-		private void DestroyTexture (Texture tex)
+		private void DestroyTexture (ref Texture tex)
 		{
-			if (tex == null) return;
+			if (tex == null)
+			{
+				return;
+			}
 			
 			DestroyImmediate(tex);
+			
 			tex = null;
 		}
 
 		private void UpdateVisual ()
 		{
-			if (DraggedObjects == null) visualMode = DragAndDropVisualMode.Rejected;
-			else if (DraggedObjectIsOurs) visualMode = DragAndDropVisualMode.Move;
-			else visualMode = DragAndDropVisualMode.Copy;
+			if (DraggedObjects == null)
+			{
+				visualMode = DragAndDropVisualMode.Rejected;
+			}
+			else if (DraggedObjectIsOurs)
+			{
+				visualMode = DragAndDropVisualMode.Move;
+			}
+			else
+			{
+				visualMode = DragAndDropVisualMode.Copy;
+			}
 		}
 		
-		private void GeneratePreview (PrefabItem item, bool isReCreate = true)
+		private void GeneratePreviewTex (PrefabItem item, bool isReCreate = true)
 		{
 			if (item == null || item.Prefab == null)
 			{
@@ -222,14 +233,20 @@ namespace Editor.UIEditor {
 			}
 			
 			var textureFileName = item.Prefab.name + "_" + item.Guid;
-			var relativeSavePath = Path.Combine(PreviewTextureSavePath,  textureFileName);
+			var relativeSavePath = Path.Combine("../Caches/Textures/UIHelper/PrefabPreview",  textureFileName);
 			
 	        var listTexPath = Path.Combine(Application.dataPath, relativeSavePath + "_s.png");
 	        var prevTexPath = Path.Combine(Application.dataPath, relativeSavePath + "_l.png");
-	        if (isReCreate) DestroyTexture(item.ListTex);
+	        if (isReCreate)
+	        {
+		        DestroyTexture(ref item.ListTex);
+	        }
 	        item.ListTex = GenerateTexture(listTexPath, isReCreate, item.Prefab, PrefabUtil.GetUIPrefabListTexture);
-	        
-	        if (isReCreate) DestroyTexture(item.PreviewTex);
+
+	        if (isReCreate)
+	        {
+		        DestroyTexture(ref item.PreviewTex);
+	        }
 	        item.PreviewTex = GenerateTexture(prevTexPath, isReCreate, item.Prefab, PrefabUtil.GetUIPrefabPreviewTexture);
 		}
 
@@ -253,43 +270,44 @@ namespace Editor.UIEditor {
 
 		private int GetCellUnderMouse (int spacingX, int spacingY)
 		{
-			var pos = Event.current.mousePosition + GUIPos;
+			var pos = Event.current.mousePosition + mListPos;
 
 			
-			var x = CellPadding;
-			var y = CellPadding + TopPadding;
+			var x = CELL_PADDING;
+			var y = CELL_PADDING + TOP_PADDING;
 			
 			if (pos.y < y) return -1;
 
-			var width = Screen.width - CellPadding + GUIPos.x;
-			var height = Screen.height - CellPadding + GUIPos.y;
+			var width = Screen.width - CELL_PADDING + mListPos.x;
+			var height = Screen.height - CELL_PADDING + mListPos.y;
 			var index = 0;
 			
 			
 			for (; ; ++index)
 			{
-				Rect rect = new Rect(x, y, spacingX, spacingY);
+				var rect = new Rect(x, y, spacingX, spacingY);
 				if (rect.Contains(pos))
 				{
 					break;
 				}
 
 				x += spacingX;
-				if (x + spacingX > width)
+				if (x + spacingX <= width)
 				{
-					if (pos.x > x)
-					{
-						return -1;
-					}
-					y += spacingY;
-					x = CellPadding;
-
-					if (y > height)
-					{
-						return -1;
-					}
+					continue;
 				}
-				
+
+				if (pos.x > x)
+				{
+					return -1;
+				}
+				y += spacingY;
+				x = CELL_PADDING;
+
+				if (y > height)
+				{
+					return -1;
+				}
 			}
 			
 			return index;
@@ -299,41 +317,32 @@ namespace Editor.UIEditor {
 
 		void OnGUI()
 		{
-			var newTab = TabIndex;
+			var newTab = mTabIndex;
 			
 			GUILayout.BeginHorizontal();
 			if (GUILayout.Toggle(newTab == 0, "原子", EditorStyles.miniButton)) newTab = 0;
 			if (GUILayout.Toggle(newTab == 1, "模组", EditorStyles.miniButton)) newTab = 1;
 			GUILayout.EndHorizontal();
+
+			mLastMousePos = Event.current.mousePosition;
 			
-			
-			if (TabIndex != newTab)
+			if (mTabIndex != newTab)
 			{
 				Load(newTab);
 			}
 			DrawItemList();
 			
-			TabIndex = newTab;
+			mTabIndex = newTab;
 			
 		}
-		
-		
-		private float lastMouseDownTimestamp = 0f;
-		private const float DOUBLE_CLICK_CHECK_VALUE = 0.05f;
-		private const float SHOW_PREVIEW_TEXTURE_INTERVAL = 1f;
-		
-		private float HoverTimeDelta = 0f;
-		private PrefabItem CurrentHoverItem;
-		private PrefabItem LastHoverItem;
-		private bool needDrawHoverToolTip;
 		
 		
 		private bool GetCurrentHoverItem(int indexUnderMouse, out PrefabItem item)
 		{
 			item = null;
-			if(indexUnderMouse < 0 || indexUnderMouse>=_currentDisplayItems.Count) return false;
+			if(indexUnderMouse < 0 || indexUnderMouse>=CurrentDisplayItems.Count) return false;
 			
-			var index = _currentDisplayItems[indexUnderMouse];
+			var index = CurrentDisplayItems[indexUnderMouse];
 			if (index != -1 && index < PrefabItemsInCurrentTab.Count)
 			{
 				item = PrefabItemsInCurrentTab[index];
@@ -347,14 +356,14 @@ namespace Editor.UIEditor {
 			var currentEvent = Event.current;
 			var type = currentEvent.type;
 			
-			var x = CellPadding;
-			var y = CellPadding;
+			var x = CELL_PADDING;
+			var y = CELL_PADDING;
 	
 			
-			var width = Screen.width - CellPadding;
+			var width = Screen.width - CELL_PADDING;
 
-			var spacingX = CellSize + CellPadding;
-			var spacingY = spacingX + labelAreaHeight;
+			var spacingX = CELL_SIZE + CELL_PADDING;
+			var spacingY = spacingX + LABEL_AREA_HEIGHT;
 			
 			var winRect = new Rect(0,0, Screen.width, Screen.height);
 			
@@ -365,9 +374,9 @@ namespace Editor.UIEditor {
 			var nowTime = Time.time;
 
 			
-			_selections.Clear();
+			PrefabItemsByFiltered.Clear();
 			
-			_currentDisplayItems.Clear();
+			CurrentDisplayItems.Clear();
 			
 			for (int i = 0; i < PrefabItemsInCurrentTab.Count; i++)
 			{
@@ -378,22 +387,22 @@ namespace Editor.UIEditor {
 					continue;
 				}
 				
-				if (string.IsNullOrEmpty(FindPrefabKey) || 
-				    (PrefabItemsInCurrentTab[i].Prefab != null && PrefabItemsInCurrentTab[i].Prefab.name.IndexOf(FindPrefabKey, System.StringComparison.CurrentCultureIgnoreCase) != -1))
+				if (string.IsNullOrEmpty(mFindPrefabKey) || 
+				    (PrefabItemsInCurrentTab[i].Prefab != null && PrefabItemsInCurrentTab[i].Prefab.name.IndexOf(mFindPrefabKey, System.StringComparison.CurrentCultureIgnoreCase) != -1))
 				{
-					_currentDisplayItems.Add(i);
+					CurrentDisplayItems.Add(i);
 				}
 			}
 
 			
 			var hasHoverItem = GetCurrentHoverItem(indexUnderMouse, out var hoveredPrefabItem);
-			CurrentHoverItem = hoveredPrefabItem;
+			mCurrHoverItem = hoveredPrefabItem;
 			
 			switch (type)
 			{
 				case EventType.MouseDown:
 				{
-					if (nowTime - lastMouseDownTimestamp < DOUBLE_CLICK_CHECK_VALUE)
+					if (nowTime - mLastMouseDownTime < DOUBLE_CLICK_CHECK_VALUE)
 					{
 						if (hasHoverItem)
 						{
@@ -401,7 +410,7 @@ namespace Editor.UIEditor {
 							AssetDatabase.OpenAsset(hoveredPrefabItem.Prefab);
 						}
 					}
-					lastMouseDownTimestamp = nowTime;
+					mLastMouseDownTime = nowTime;
 					break;
 				}
 				case EventType.MouseDrag:
@@ -423,6 +432,7 @@ namespace Editor.UIEditor {
 					currentEvent.Use();
 					break;
 				}
+				default: break;
 			}
 			
 
@@ -430,25 +440,24 @@ namespace Editor.UIEditor {
 			{
 				GUIUtility.keyboardControl = 0;
 
-				if (currentEvent.button == 0 && indexUnderMouse < _currentDisplayItems.Count)
+				if (currentEvent.button == 0 && indexUnderMouse < CurrentDisplayItems.Count)
 				{
-					var index = _currentDisplayItems[indexUnderMouse];
+					var index = CurrentDisplayItems[indexUnderMouse];
 					if (index != -1 && index < PrefabItemsInCurrentTab.Count)
 					{
-						_selections.Add(PrefabItemsInCurrentTab[index]);
-						DraggedObjects = _selections.Select(item => item.Prefab).ToArray();
+						DraggedObjects = new []{ PrefabItemsInCurrentTab[index].Prefab };
 						currentEvent.Use();
 					}
 				}
 			}
 			
-	        GUIPos = EditorGUILayout.BeginScrollView(GUIPos);
+	        mListPos = EditorGUILayout.BeginScrollView(mListPos);
 			{
 				var normal = new Color(1f, 1f, 1f, 0f);
 				
-				for (var i = 0; i < _currentDisplayItems.Count; i++)
+				for (var i = 0; i < CurrentDisplayItems.Count; i++)
 				{
-					var index = _currentDisplayItems[i];
+					var index = CurrentDisplayItems[i];
 					var item = PrefabItemsInCurrentTab[index];
 
 					if (item.Prefab == null)
@@ -457,7 +466,7 @@ namespace Editor.UIEditor {
 						continue;
 					}
 
-					var itemBoxRect = new Rect(x, y, CellSize, CellSize);
+					var itemBoxRect = new Rect(x, y, CELL_SIZE, CELL_SIZE);
 					var iconRect = itemBoxRect;
 					iconRect.xMin += 2f;
 					iconRect.xMax -= 2f;
@@ -466,16 +475,14 @@ namespace Editor.UIEditor {
 					itemBoxRect.yMax -= 1f;
 					
 					var itemBoxRectCheck = new Rect(itemBoxRect);
-					itemBoxRectCheck.y -=  GUIPos.y;
+					itemBoxRectCheck.y -=  mListPos.y;
+					
 					if (winRect.Overlaps(itemBoxRectCheck))
 					{
 						if (item.ListTex == null)
 						{
-							GeneratePreview(item, false);
+							GeneratePreviewTex(item, false);
 						}
-						
-						//Content.tooltip = !isDragging ? item.Prefab.name : "";
-						//Content.image = item.PreviewTex;
 						
 						GUI.color = Color.white;
 						GUI.backgroundColor = normal;
@@ -499,9 +506,9 @@ namespace Editor.UIEditor {
 						item.ListItemRect = Rect.zero;
 					}
 
-					var labelRect = new Rect(itemBoxRect.x, itemBoxRect.y + itemBoxRect.height, itemBoxRect.width, labelAreaHeight);
+					var labelRect = new Rect(itemBoxRect.x, itemBoxRect.y + itemBoxRect.height, itemBoxRect.width, LABEL_AREA_HEIGHT);
 					var labelRectCheck = new Rect(labelRect);
-					labelRectCheck.y -=  GUIPos.y;
+					labelRectCheck.y -=  mListPos.y;
 					if(winRect.Overlaps(labelRectCheck)) 
 					{
 						GUI.backgroundColor = new Color(1f, 1f, 1f, 0.5f);
@@ -519,7 +526,7 @@ namespace Editor.UIEditor {
 					}
 					
 					y += spacingY;
-					x = CellPadding;
+					x = CELL_PADDING;
 				}
 				
 	            GUILayout.Space(y + spacingY);
@@ -527,33 +534,13 @@ namespace Editor.UIEditor {
 			
 	        EditorGUILayout.EndScrollView();
 	        
-	        if(needDrawHoverToolTip && CurrentHoverItem != null)
-	        {
-		        var previewTex = CurrentHoverItem.PreviewTex;
-		        var pos = Event.current.mousePosition;
-		        pos.x -= previewTex.width * 0.5f;
-			        
-		        var toolTipRect = new Rect(pos.x, pos.y, previewTex.width, previewTex.height);
-		        
-		        var outlineRect = new Rect(toolTipRect);
-		        outlineRect.x -= 4;
-		        outlineRect.y -= 4;
-		        outlineRect.width += 8;
-		        outlineRect.height += 8;
-		        
-		        GUI.DrawTexture(outlineRect, PrefabUtil.BorderTexture);
-		        GUI.DrawTexture(toolTipRect, PrefabUtil.BackdropTexture);
-		        GUI.DrawTexture(toolTipRect, previewTex);
-	        }
-	        
-	        
 	        //// 搜索过滤
 	        GUILayout.BeginHorizontal();
 	        {
-	            FindPrefabKey = EditorGUILayout.TextField("", FindPrefabKey, "SearchTextField", GUILayout.Width(Screen.width - 20f));
+	            mFindPrefabKey = EditorGUILayout.TextField("", mFindPrefabKey, "SearchTextField", GUILayout.Width(Screen.width - 20f));
 	            if (GUILayout.Button("", "SearchCancelButton", GUILayout.Width(18f)))
 	            {
-		            FindPrefabKey = "";
+		            mFindPrefabKey = "";
 	                GUIUtility.keyboardControl = 0;
 	            }
 
@@ -561,34 +548,103 @@ namespace Editor.UIEditor {
 	        GUILayout.EndHorizontal();
 			
 		}
-
+		
 		private void Update()
 		{
-			if (CurrentHoverItem == null)
-			{
-				HoverTimeDelta = 0f;
-				LastHoverItem = null;
-				needDrawHoverToolTip = false;
-				return;
-			}
 			
-			if(CurrentHoverItem == LastHoverItem)
+			if (mCurrHoverItem == null)
 			{
-				HoverTimeDelta += Time.deltaTime;
-				//// 检查是否需要显示预览的大贴图
-				needDrawHoverToolTip = HoverTimeDelta > SHOW_PREVIEW_TEXTURE_INTERVAL;
-				if (needDrawHoverToolTip)
-				{
-					Repaint();
-				}
+				PrefabTipPopup.Hide();
 			}
 			else
 			{
-				needDrawHoverToolTip = false;
-				HoverTimeDelta = 0f;
-				LastHoverItem = CurrentHoverItem;
+				if (mLastHoverItem != mCurrHoverItem)
+				{
+					PrefabTipPopup.Hide();
+				}
+
+				
+				
+				PrefabTipPopup.Show(mCurrHoverItem, Time.fixedDeltaTime, this.position.position + mLastMousePos);
+				GetWindow<UIPrefabPreviewWindow>().Focus();
 			}
 
+			mLastHoverItem = mCurrHoverItem;
 		}
+	}
+}
+
+class PrefabItem
+{
+	public GameObject Prefab;
+	public Texture ListTex;
+	public Texture PreviewTex;
+	public string Guid;
+	public Rect ListItemRect;
+}
+
+class PrefabTipPopup : EditorWindow
+{
+	
+	private static readonly float SHOW_TIME_INTERVAL = 0.5f;
+	private static PrefabTipPopup _winInst;
+	
+	private static float _showTimeDelta = 0f;
+	public static void Hide()
+	{
+		_showTimeDelta = 0f;
+		
+		if (_winInst != null)
+		{
+			_winInst.Close();
+			_winInst._item = null;
+		}
+		
+	}
+
+	
+	public static void Show(PrefabItem item, float deltaTime, Vector2 pos)
+	{
+		_showTimeDelta += deltaTime;
+		
+		if (_showTimeDelta < SHOW_TIME_INTERVAL|| item == null || item.PreviewTex == null )
+		{
+			return;
+		}
+		
+		var size = new Vector2(item.PreviewTex.width + 8, item.PreviewTex.height + 8);
+		
+		if(_winInst == null) {
+			_winInst = CreateInstance<PrefabTipPopup>();
+		}
+
+		_winInst.position = new Rect(pos.x, pos.y, size.x, size.y);
+		
+		_winInst.maxSize = _winInst.minSize = size;
+		_winInst._item = item;
+		_winInst.ShowPopup();
+		
+	}
+
+	private PrefabItem _item;
+
+
+	public void OnGUI()
+	{
+		if (_item == null) return;
+		
+		var previewTex = _item.PreviewTex;
+			        
+		var toolTipRect = new Rect(4, 4, previewTex.width, previewTex.height);
+		        
+		var outlineRect = new Rect(toolTipRect);
+		outlineRect.x -= 4;
+		outlineRect.y -= 4;
+		outlineRect.width += 8;
+		outlineRect.height += 8;
+		        
+		GUI.DrawTexture(outlineRect, PrefabUtil.BorderTexture);
+		GUI.DrawTexture(toolTipRect, PrefabUtil.BackdropTexture);
+		GUI.DrawTexture(toolTipRect, previewTex);
 	}
 }

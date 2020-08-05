@@ -137,9 +137,9 @@ namespace Editor.UIEditor
                     var prefabObj = (GameObject)PrefabUtility.InstantiatePrefab(prefabAsset);
                     prefabObj.transform.SetParent(root.transform.parent);
                     prefabObj.transform.localPosition = root.transform.localPosition;
-                    GameObject.DestroyImmediate(root);
+                    UnityEngine.Object.DestroyImmediate(root);
                 }
-                catch (Exception e)
+                catch
                 {
                     EditorUtility.DisplayDialog("出错了", "创建" + args[2] + ": '"+Path.GetFileName(assetPath)+"' 失败了", "好的");
                     Unpack(root);
