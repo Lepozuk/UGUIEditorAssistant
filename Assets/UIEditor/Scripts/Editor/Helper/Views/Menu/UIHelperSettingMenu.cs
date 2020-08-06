@@ -24,12 +24,11 @@ namespace Editor.UIEditor
         /// </summary>
         [MenuItem(MenuDefine.GRID_SNAP)]
         private static void SnapGird() => HelperSettings.GridSnap = !HelperSettings.GridSnap;
-
         [MenuItem(MenuDefine.GRID_SNAP, true)]
         private static bool UpdateSnapGrid()
         {
             Menu.SetChecked(MenuDefine.GRID_SNAP, HelperSettings.GridSnap);
-            return HelperSettings.GridVisible;
+            return true;
         }
         
         

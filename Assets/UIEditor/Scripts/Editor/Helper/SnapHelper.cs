@@ -175,7 +175,7 @@ namespace Editor.UIEditor
             canvasRect = new CanvasRect();
             position = Vector3.zero;
             
-            if (!(HelperSettings.GridSnap && HelperSettings.GridVisible))
+            if (!HelperSettings.GridSnap)
             {
                 return false;
             }
